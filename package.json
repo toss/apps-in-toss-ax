@@ -1,0 +1,24 @@
+{
+  "name": "@apps-in-toss/ax",
+  "version": "1.0.0",
+  "description": "AppsInToss CLI",
+  "engines": {
+    "npm": ">=8"
+  },
+  "repository": "toss/apps-in-toss-cli",
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "dependencies": {
+    "bin-links": "^6.0.0",
+    "https-proxy-agent": "^7.0.2",
+    "node-fetch": "^3.3.2",
+    "tar": "7.5.2"
+  },
+  "bin": {
+    "ax": "bin/ax"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
