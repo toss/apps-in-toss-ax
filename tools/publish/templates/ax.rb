@@ -10,7 +10,7 @@ class {{ .FormulaName }} < Formula
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/toss/apps-in-toss-ax/release/download/v{{ .Version }}/ax_darwin_arm64.tar.gz"
+      url "https://github.com/toss/apps-in-toss-ax/releases/download/v{{ .Version }}/ax_darwin_arm64.tar.gz"
       sha256 "{{ .Checksum.ax_darwin_arm64 }}"
 
       def install
@@ -21,7 +21,7 @@ class {{ .FormulaName }} < Formula
       end
     end
     if Hardware::CPU.intel?
-      url "https://github.com/toss/apps-in-toss-ax/release/download/v{{ .Version }}/ax_darwin_amd64.tar.gz"
+      url "https://github.com/toss/apps-in-toss-ax/releases/download/v{{ .Version }}/ax_darwin_amd64.tar.gz"
       sha256 "{{ .Checksum.ax_darwin_amd64 }}"
 
       def install
@@ -35,7 +35,7 @@ class {{ .FormulaName }} < Formula
 
   on_linux do
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/toss/apps-in-toss-ax/release/download/v{{ .Version }}/ax_linux_arm64.tar.gz"
+      url "https://github.com/toss/apps-in-toss-ax/releases/download/v{{ .Version }}/ax_linux_arm64.tar.gz"
       sha256 "{{ .Checksum.ax_linux_arm64 }}"
 
       def install
@@ -46,7 +46,7 @@ class {{ .FormulaName }} < Formula
       end
     end
     if Hardware::CPU.intel?
-      url "https://github.com/toss/apps-in-toss-ax/release/download/v{{ .Version }}/ax_linux_amd64.tar.gz"
+      url "https://github.com/toss/apps-in-toss-ax/releases/download/v{{ .Version }}/ax_linux_amd64.tar.gz"
       sha256 "{{ .Checksum.ax_linux_amd64 }}"
 
       def install

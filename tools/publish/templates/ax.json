@@ -2,14 +2,14 @@
   "version": "{{ .Version }}",
   "architecture": {
       "64bit": {
-          "url": "https://github.com/toss/apps-in-toss-ax/release/download/v{{ .Version }}/ax_windows_amd64.tar.gz",
+          "url": "https://github.com/toss/apps-in-toss-ax/releases/download/v{{ .Version }}/ax_windows_amd64.tar.gz",
           "bin": [
               "ax.exe"
           ],
           "hash": "{{ .Checksum.ax_windows_amd64 }}"
       },
       "arm64": {
-          "url": "https://github.com/toss/apps-in-toss-ax/release/download/v{{ .Version }}/ax_windows_arm64.tar.gz",
+          "url": "https://github.com/toss/apps-in-toss-ax/releases/download/v{{ .Version }}/ax_windows_arm64.tar.gz",
           "bin": [
               "ax.exe"
           ],
