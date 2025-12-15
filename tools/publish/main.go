@@ -8,12 +8,12 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+	"text/template"
 
 	"github.com/google/go-github/v62/github"
 	"github.com/toss/apps-in-toss-ax/internal/utils"
