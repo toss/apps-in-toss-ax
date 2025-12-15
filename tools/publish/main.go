@@ -24,7 +24,7 @@ import (
 const (
 	OWNER         = "toss"
 	HOMEBREW_REPO = "homebrew-tap"
-	SCOOP_REPO    = "scoop"
+	SCOOP_REPO    = "scoop-bucket"
 )
 
 var (
