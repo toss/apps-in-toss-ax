@@ -20,6 +20,7 @@ func NewCommand(cfg CommandConfig) *cobra.Command {
 		},
 	}
 
+	cmd.InitDefaultCompletionCmd()
 	cmd.AddCommand(NewMcpCommand())
 
 	return cmd
