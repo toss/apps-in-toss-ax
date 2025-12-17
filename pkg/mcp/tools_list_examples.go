@@ -8,7 +8,7 @@ import (
 )
 
 var listExamples = &mcp.Tool{
-	Name:        "list.examples",
+	Name:        "list_examples",
 	Title:       "List AppsInToss Examples",
 	Description: "List AppsInToss Examples. you can get the AppsInToss examples projects list.",
 	Annotations: &mcp.ToolAnnotations{

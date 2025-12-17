@@ -41,6 +41,21 @@ This MCP Agent supports mini-app development for AppsInToss. It provides access 
 - For React Native: `tossmini-docs.toss.im/tds-react-native`
 - For Web: `tossmini-docs.toss.im/tds-mobile`
 
+**TDS Package Usage Guide:**
+
+| Platform | Framework Version | TDS Package |
+|----------|-------------------|-------------|
+| React Native | `@apps-in-toss/framework` < 1.0.0 | `@toss-design-system/react-native` |
+| React Native | `@apps-in-toss/framework` >= 1.0.0 | `@toss/tds-react-native` |
+| Web | `@apps-in-toss/web-framework` < 1.0.0 | `@toss-design-system/mobile` |
+| Web | `@apps-in-toss/web-framework` >= 1.0.0 | `@toss/tds-mobile` |
+
+- `@toss/tds-react-native`: TDS React Native version for native mini-apps
+- `@toss/tds-mobile`: TDS Web version for WebView mini-apps
+
+**Migration Note:**
+If documentation or code examples use import statements from a different TDS package version, first try simply replacing the package name while keeping the same component imports. The component APIs are largely compatible between versions.
+
 ### MiniApp
 
 A lightweight application that runs within the Toss app. It runs directly in the Toss app without separate installation.
@@ -51,7 +66,7 @@ A format where games developed with the Unity game engine are built as WebGL and
 
 ## Tool Usage Guide
 
-### list.docs
+### list_docs
 
 Retrieves the list of documents from the AppsInToss Developer Center.
 
@@ -61,23 +76,23 @@ Retrieves the list of documents from the AppsInToss Developer Center.
 - When development guides or API references are needed
 
 **Return Information:**
-- Document ID (`id`): Used when calling `get.docs`
+- Document ID (`id`): Used when calling `get_docs`
 - Title (`title`): The document title
 - Description (`content`): Brief description of the document
 - URL (`url`): Original document URL
 - Category (`category`): Document classification
 
-### get.docs
+### get_docs
 
 Retrieves the full content of a specific document.
 
 **How to Use:**
-1. First call `list.docs` to check the document list
+1. First call `list_docs` to check the document list
 2. Find the `id` of the desired document
-3. Call `get.docs` with the corresponding `document_id`
+3. Call `get_docs` with the corresponding `document_id`
 
 **Parameters:**
-- `document_id` (required): Document ID obtained from `list.docs`
+- `document_id` (required): Document ID obtained from `list_docs`
 
 ## Development Guidelines
 
@@ -113,8 +128,8 @@ Refer to these categories when searching for documents:
 
 ### Using Documentation
 
-1. First search for relevant documents using `list.docs` for user questions
-2. If appropriate documents are found, check detailed content with `get.docs`
+1. First search for relevant documents using `list_docs` for user questions
+2. If appropriate documents are found, check detailed content with `get_docs`
 3. Provide accurate information based on document content
 4. Include original document URLs when necessary
 

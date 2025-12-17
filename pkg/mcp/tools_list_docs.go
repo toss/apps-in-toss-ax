@@ -8,7 +8,7 @@ import (
 )
 
 var listDocs = &mcp.Tool{
-	Name:        "list.docs",
+	Name:        "list_docs",
 	Title:       "List AppsInToss Docs",
 	Description: "List AppsInToss Documents",
 	Annotations: &mcp.ToolAnnotations{

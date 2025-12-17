@@ -8,7 +8,7 @@ import (
 )
 
 var getExample = &mcp.Tool{
-	Name:        "get.example",
+	Name:        "get_example",
 	Title:       "Get AppsInToss Example",
 	Description: "Get a AppsInToss Example. you must call list.examples first to get the examples list. and then you choose the you want to get.",
 	Annotations: &mcp.ToolAnnotations{

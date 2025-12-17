@@ -8,9 +8,9 @@ import (
 )
 
 var getDocs = &mcp.Tool{
-	Name:        "get.docs",
+	Name:        "get_docs",
 	Title:       "Get AppsInToss Docs",
-	Description: "Get AppsInToss Document. you must call list.docs first to get the documents list. and then you choose the you want to get.",
+	Description: "Get AppsInToss Document. you must call list_docs first to get the documents list. and then you choose the you want to get.",
 	Annotations: &mcp.ToolAnnotations{
 		Title:          "Get AppsInToss Docs",
 		ReadOnlyHint:   true,
