@@ -21,6 +21,10 @@ builds:
     binary: ax
     flags:
       - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/toss/apps-in-toss-ax/cmd.version={{.Version}}
+      - -X github.com/toss/apps-in-toss-ax/cmd.hash={{.ShortCommit}}
     env:
       - CGO_ENABLED=0
     targets:

@@ -7,8 +7,7 @@ import (
 )
 
 type CommandConfig struct {
-	Name    string
-	Version string
+	Name string
 }
 
 func NewCommand(cfg CommandConfig) *cobra.Command {
@@ -22,6 +21,7 @@ func NewCommand(cfg CommandConfig) *cobra.Command {
 
 	cmd.InitDefaultCompletionCmd()
 	cmd.AddCommand(NewMcpCommand())
+	cmd.AddCommand(NewVersionCommand())
 
 	return cmd
 }

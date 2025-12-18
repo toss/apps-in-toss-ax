@@ -25,8 +25,7 @@ func Run() {
 	}()
 
 	cfg := cmd.CommandConfig{
-		Name:    "ax",
-		Version: "0.1.0",
+		Name: "ax",
 	}
 
 	if err := cmd.NewCommand(cfg).ExecuteContext(ctx); err != nil {
