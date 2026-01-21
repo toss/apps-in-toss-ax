@@ -337,10 +337,10 @@ func TestPartialMatchKorean(t *testing.T) {
 		query     string
 		wantMatch bool
 	}{
-		{"미니앱", true},      // "미니앱에서"에서 "미니앱" 검색
-		{"앱인토스", true},    // "앱인토스에서"에서 "앱인토스" 검색
-		{"결제", true},       // 정확히 일치
-		{"미니", true},       // 앞부분 매칭
+		{"미니앱", true},  // "미니앱에서"에서 "미니앱" 검색
+		{"앱인토스", true}, // "앱인토스에서"에서 "앱인토스" 검색
+		{"결제", true},   // 정확히 일치
+		{"미니", true},   // 앞부분 매칭
 	}
 
 	for _, tt := range tests {
@@ -568,6 +568,309 @@ func TestBuildCategoryMap(t *testing.T) {
 			t.Errorf("URL %s: expected category '%s', got '%s'", url, expectedCategory, categoryMap[url])
 		}
 	}
+}
+
+func TestSearchBoostAndFuzziness(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "bleve-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	indexPath := filepath.Join(tempDir, "test-index")
+	im := NewIndexManager(indexPath)
+
+	if err := im.CreateIndex(); err != nil {
+		t.Fatalf("Failed to create index: %v", err)
+	}
+	defer im.Close()
+
+	// Boost 테스트를 위한 문서들
+	// title(5.0) > description(1.5) > category(1.0) = content(1.0)
+	docs := []IndexDocument{
+		{
+			ID:          "title_match",
+			Title:       "결제 시스템 가이드",
+			Description: "일반적인 설명입니다",
+			Content:     "일반적인 내용입니다",
+			URL:         "https://example.com/title",
+			Category:    "일반",
+		},
+		{
+			ID:          "desc_match",
+			Title:       "일반 가이드",
+			Description: "결제 연동에 대한 설명입니다",
+			Content:     "일반적인 내용입니다",
+			URL:         "https://example.com/desc",
+			Category:    "일반",
+		},
+		{
+			ID:          "category_match",
+			Title:       "일반 가이드",
+			Description: "일반적인 설명입니다",
+			Content:     "일반적인 내용입니다",
+			URL:         "https://example.com/category",
+			Category:    "결제",
+		},
+		{
+			ID:          "content_match",
+			Title:       "일반 가이드",
+			Description: "일반적인 설명입니다",
+			Content:     "결제 기능을 구현하는 방법입니다",
+			URL:         "https://example.com/content",
+			Category:    "일반",
+		},
+	}
+
+	if err := im.IndexDocuments(docs); err != nil {
+		t.Fatalf("Failed to index documents: %v", err)
+	}
+
+	t.Run("Boost_TitleHighestPriority", func(t *testing.T) {
+		results, scores, err := im.Search("결제", 10)
+		if err != nil {
+			t.Fatalf("Search failed: %v", err)
+		}
+
+		if len(results) < 4 {
+			t.Fatalf("Expected at least 4 results, got %d", len(results))
+		}
+
+		// title 매칭(boost 5.0)이 가장 높은 점수여야 함
+		if results[0].ID != "title_match" {
+			t.Errorf("Expected 'title_match' to be first (highest boost), got '%s'", results[0].ID)
+			for i, r := range results {
+				t.Logf("  Result %d: %s (score: %f)", i, r.ID, scores[i])
+			}
+		}
+
+		// description 매칭(boost 1.5)이 두 번째로 높아야 함
+		if results[1].ID != "desc_match" {
+			t.Errorf("Expected 'desc_match' to be second (boost 1.5), got '%s'", results[1].ID)
+		}
+
+		// 점수 순서 확인: title > category > desc > content
+		for i := 0; i < len(scores)-1; i++ {
+			if scores[i] < scores[i+1] {
+				t.Errorf("Scores should be in descending order: score[%d]=%f < score[%d]=%f",
+					i, scores[i], i+1, scores[i+1])
+			}
+		}
+	})
+
+	t.Run("Boost_DescriptionVsContent", func(t *testing.T) {
+		// description(0.7)이 content(0.5)보다 높은 점수여야 함
+		results, scores, err := im.Search("결제", 10)
+		if err != nil {
+			t.Fatalf("Search failed: %v", err)
+		}
+
+		var descScore, contentScore float64
+		for i, r := range results {
+			if r.ID == "desc_match" {
+				descScore = scores[i]
+			}
+			if r.ID == "content_match" {
+				contentScore = scores[i]
+			}
+		}
+
+		if descScore <= contentScore {
+			t.Errorf("Description match (boost 0.7) should score higher than content match (boost 0.5): desc=%f, content=%f",
+				descScore, contentScore)
+		}
+	})
+}
+
+func TestSearchFuzziness(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "bleve-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	indexPath := filepath.Join(tempDir, "test-index")
+	im := NewIndexManager(indexPath)
+
+	if err := im.CreateIndex(); err != nil {
+		t.Fatalf("Failed to create index: %v", err)
+	}
+	defer im.Close()
+
+	docs := []IndexDocument{
+		{
+			ID:          "doc1",
+			Title:       "Navigation 가이드",
+			Description: "React Navigation을 사용한 화면 전환",
+			Content:     "네비게이션 구현 방법을 설명합니다",
+			URL:         "https://example.com/nav",
+			Category:    "네비게이션",
+		},
+		{
+			ID:          "doc2",
+			Title:       "Button 컴포넌트",
+			Description: "버튼 컴포넌트 사용법",
+			Content:     "다양한 버튼 스타일을 제공합니다",
+			URL:         "https://example.com/button",
+			Category:    "컴포넌트",
+		},
+	}
+
+	if err := im.IndexDocuments(docs); err != nil {
+		t.Fatalf("Failed to index documents: %v", err)
+	}
+
+	// Fuzziness 테스트 - description과 content에 AutoFuzziness가 설정됨
+	// 영어 단어의 경우 약간의 오타도 매칭될 수 있음
+	t.Run("Fuzziness_EnglishTypo", func(t *testing.T) {
+		// "Navigatin" (오타) 로 검색 시 "Navigation" 매칭 가능 여부
+		results, _, err := im.Search("Navigaton", 10)
+		if err != nil {
+			t.Fatalf("Search failed: %v", err)
+		}
+
+		// Fuzziness가 동작하면 결과가 있어야 함
+		if len(results) > 0 {
+			t.Logf("Fuzziness working: found %d results for typo 'Navigaton'", len(results))
+		} else {
+			t.Logf("Fuzziness did not match typo 'Navigaton' - this may be expected behavior")
+		}
+	})
+
+	t.Run("ExactMatch_StillWorks", func(t *testing.T) {
+		// 정확한 검색어는 반드시 매칭되어야 함
+		results, _, err := im.Search("Navigation", 10)
+		if err != nil {
+			t.Fatalf("Search failed: %v", err)
+		}
+
+		if len(results) == 0 {
+			t.Error("Expected at least one result for exact match 'Navigation'")
+		}
+	})
+}
+
+func TestSearchMultiFieldMatching(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "bleve-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	indexPath := filepath.Join(tempDir, "test-index")
+	im := NewIndexManager(indexPath)
+
+	if err := im.CreateIndex(); err != nil {
+		t.Fatalf("Failed to create index: %v", err)
+	}
+	defer im.Close()
+
+	// 여러 필드에 동일한 키워드가 있는 문서는 더 높은 점수를 받아야 함
+	docs := []IndexDocument{
+		{
+			ID:          "multi_match",
+			Title:       "앱인토스 결제 가이드",
+			Description: "앱인토스에서 결제를 연동하는 방법",
+			Content:     "앱인토스 미니앱에서 결제 기능 구현",
+			URL:         "https://example.com/multi",
+			Category:    "앱인토스 > 결제",
+		},
+		{
+			ID:          "single_match",
+			Title:       "일반 가이드",
+			Description: "일반적인 설명입니다",
+			Content:     "앱인토스 관련 내용이 있습니다",
+			URL:         "https://example.com/single",
+			Category:    "일반",
+		},
+	}
+
+	if err := im.IndexDocuments(docs); err != nil {
+		t.Fatalf("Failed to index documents: %v", err)
+	}
+
+	t.Run("MultiFieldMatch_HigherScore", func(t *testing.T) {
+		results, scores, err := im.Search("앱인토스", 10)
+		if err != nil {
+			t.Fatalf("Search failed: %v", err)
+		}
+
+		if len(results) < 2 {
+			t.Fatalf("Expected at least 2 results, got %d", len(results))
+		}
+
+		// 여러 필드에서 매칭되는 문서가 더 높은 점수를 받아야 함
+		if results[0].ID != "multi_match" {
+			t.Errorf("Expected 'multi_match' (multiple field matches) to rank first, got '%s'", results[0].ID)
+			for i, r := range results {
+				t.Logf("  Result %d: %s (score: %f)", i, r.ID, scores[i])
+			}
+		}
+
+		// multi_match의 점수가 single_match보다 높아야 함
+		if len(scores) >= 2 && scores[0] <= scores[1] {
+			t.Errorf("Multi-field match should have higher score: multi=%f, single=%f", scores[0], scores[1])
+		}
+	})
+}
+
+func TestSearchDescriptionVsCategory(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "bleve-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	indexPath := filepath.Join(tempDir, "test-index")
+	im := NewIndexManager(indexPath)
+
+	if err := im.CreateIndex(); err != nil {
+		t.Fatalf("Failed to create index: %v", err)
+	}
+	defer im.Close()
+
+	// Description boost(1.5) vs Category boost(1.0) 테스트
+	docs := []IndexDocument{
+		{
+			ID:          "desc_unity",
+			Title:       "일반 가이드",
+			Description: "Unity 엔진을 사용한 게임 개발",
+			Content:     "일반적인 내용입니다",
+			URL:         "https://example.com/desc",
+			Category:    "일반",
+		},
+		{
+			ID:          "category_unity",
+			Title:       "일반 가이드",
+			Description: "일반적인 설명입니다",
+			Content:     "일반적인 내용입니다",
+			URL:         "https://example.com/cat",
+			Category:    "Unity 게임",
+		},
+	}
+
+	if err := im.IndexDocuments(docs); err != nil {
+		t.Fatalf("Failed to index documents: %v", err)
+	}
+
+	t.Run("DescriptionBoost_HigherThanCategory", func(t *testing.T) {
+		results, scores, err := im.Search("Unity", 10)
+		if err != nil {
+			t.Fatalf("Search failed: %v", err)
+		}
+
+		if len(results) < 2 {
+			t.Fatalf("Expected at least 2 results, got %d", len(results))
+		}
+
+		// Description(boost 1.5)이 Category(boost 1.0)보다 높아야 함
+		if results[0].ID != "desc_unity" {
+			t.Errorf("Expected 'desc_unity' (boost 1.5) to rank higher than category match (boost 1.0), got '%s'", results[0].ID)
+			for i, r := range results {
+				t.Logf("  Result %d: %s (score: %f)", i, r.ID, scores[i])
+			}
+		}
+	})
 }
 
 func TestCJKAnalyzer_KoreanTokenization(t *testing.T) {

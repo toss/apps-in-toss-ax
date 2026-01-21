@@ -245,18 +245,26 @@ func (im *IndexManager) Search(query string, limit int) ([]IndexDocument, []floa
 	titleQuery := bleve.NewMatchQuery(query)
 	titleQuery.SetField("title")
 	titleQuery.Analyzer = "cjk_search"
+	titleQuery.SetBoost(5.0)
 
 	descQuery := bleve.NewMatchQuery(query)
 	descQuery.SetField("description")
 	descQuery.Analyzer = "cjk_search"
+	descQuery.SetAutoFuzziness(true)
+	descQuery.SetPrefix(1)
+	descQuery.SetBoost(1.5)
 
 	contentQuery := bleve.NewMatchQuery(query)
 	contentQuery.SetField("content")
 	contentQuery.Analyzer = "cjk_search"
+	contentQuery.SetAutoFuzziness(true)
+	contentQuery.SetPrefix(1)
+	contentQuery.SetBoost(1.0)
 
 	categoryQuery := bleve.NewMatchQuery(query)
 	categoryQuery.SetField("category")
 	categoryQuery.Analyzer = "cjk_search"
+	categoryQuery.SetBoost(1.0)
 
 	searchQuery := bleve.NewDisjunctionQuery(titleQuery, descQuery, contentQuery, categoryQuery)
 	searchRequest := bleve.NewSearchRequestOptions(searchQuery, limit, 0, false)
