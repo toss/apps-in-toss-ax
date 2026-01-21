@@ -2,11 +2,9 @@ package docs
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 
+	"github.com/toss/apps-in-toss-ax/pkg/docid"
 	"github.com/toss/apps-in-toss-ax/pkg/llms"
 )
 
@@ -114,7 +112,7 @@ func flattenSection(s llms.Section, parentCategory string) []LlmDocument {
 			URL:      link.URL,
 			Category: category,
 		}
-		doc.ID = generateID(doc)
+		doc.ID = docid.Generate(doc.Title, doc.URL, doc.Category)
 		docs = append(docs, doc)
 	}
 
@@ -124,20 +122,3 @@ func flattenSection(s llms.Section, parentCategory string) []LlmDocument {
 	return docs
 }
 
-// documentKey는 ID 생성에 사용되는 필드만 포함 (멱등성 보장)
-type documentKey struct {
-	Title    string `json:"title"`
-	URL      string `json:"url,omitempty"`
-	Category string `json:"category,omitempty"`
-}
-
-func generateID(doc LlmDocument) string {
-	key := documentKey{
-		Title:    doc.Title,
-		URL:      doc.URL,
-		Category: doc.Category,
-	}
-	data, _ := json.Marshal(key)
-	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:8])
-}
