@@ -94,6 +94,30 @@ Retrieves the full content of a specific document.
 **Parameters:**
 - `document_id` (required): Document ID obtained from `list_docs`
 
+### search_docs
+
+Searches AppsInToss documentation using full-text search. Returns matching documents ranked by relevance.
+
+**When to Use:**
+- When users ask questions about specific features or concepts
+- When you need to find documents containing specific keywords
+- When `list_docs` results are too broad and you need more targeted results
+- When searching for error messages, API names, or technical terms
+
+**Parameters:**
+- `query` (required): Search query string
+- `limit` (optional): Maximum number of results to return (default: 10)
+
+**Return Information:**
+- Search results ranked by relevance score
+- Document metadata including ID, title, and matching content snippets
+- Total count of matching documents
+
+**How to Use:**
+1. Call `search_docs` with the relevant search query
+2. Review the search results ranked by relevance
+3. Use `get_docs` with the document `id` to retrieve full content if needed
+
 ## Development Guidelines
 
 ### For New Mini-App Development

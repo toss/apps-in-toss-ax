@@ -8,7 +8,7 @@ import (
 )
 
 var searchDocs = &mcp.Tool{
-	Name:        "search_document",
+	Name:        "search_docs",
 	Title:       "Search AppsInToss Documents",
 	Description: "Search AppsInToss documentation using full-text search. Returns matching documents ranked by relevance.",
 	Annotations: &mcp.ToolAnnotations{
