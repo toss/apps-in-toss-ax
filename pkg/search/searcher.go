@@ -2,17 +2,14 @@ package search
 
 import (
 	"context"
-	"io"
-	"net/http"
-	"time"
 
+	"github.com/toss/apps-in-toss-ax/internal/httputil"
 	"github.com/toss/apps-in-toss-ax/pkg/llms"
 )
 
 const (
-	llmsUrl        = "https://developers-apps-in-toss.toss.im/llms.txt"
-	llmsFullUrl    = "https://developers-apps-in-toss.toss.im/llms-full.txt"
-	defaultTimeout = 30 * time.Second
+	llmsUrl     = "https://developers-apps-in-toss.toss.im/llms.txt"
+	llmsFullUrl = "https://developers-apps-in-toss.toss.im/llms-full.txt"
 )
 
 type SearchResult struct {
@@ -84,7 +81,7 @@ func (s *Searcher) rebuildIndex(ctx context.Context) error {
 
 func (s *Searcher) buildIndex(ctx context.Context, etag string) error {
 	// llms-full.txt 가져오기
-	content, newETag, err := s.fetchWithETag(ctx, llmsFullUrl)
+	content, newETag, err := httputil.FetchWithETag(ctx, llmsFullUrl, 0)
 	if err != nil {
 		return err
 	}
@@ -116,7 +113,7 @@ func (s *Searcher) buildIndex(ctx context.Context, etag string) error {
 
 // fetchCategoryMap은 llms.txt를 가져와서 URL → Category 매핑을 생성합니다
 func (s *Searcher) fetchCategoryMap(ctx context.Context) map[string]string {
-	content, _, err := s.fetchWithETag(ctx, llmsUrl)
+	content, _, err := httputil.FetchWithETag(ctx, llmsUrl, 0)
 	if err != nil {
 		return nil
 	}
@@ -130,38 +127,22 @@ func (s *Searcher) fetchCategoryMap(ctx context.Context) map[string]string {
 	return BuildCategoryMap(llmsTxt)
 }
 
-func (s *Searcher) fetchWithETag(ctx context.Context, url string) (content string, etag string, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", "", err
-	}
-
-	client := &http.Client{Timeout: defaultTimeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", "", &FetchError{URL: url, StatusCode: resp.StatusCode}
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", err
-	}
-
-	return string(body), resp.Header.Get("ETag"), nil
+func (s *Searcher) Search(ctx context.Context, query string, opts *SearchOptions) ([]SearchResult, error) {
+	return DoSearch(s.indexManager, query, opts)
 }
 
-func (s *Searcher) Search(ctx context.Context, query string, opts *SearchOptions) ([]SearchResult, error) {
+func (s *Searcher) Close() error {
+	return s.indexManager.Close()
+}
+
+// DoSearch는 IndexManager를 사용하여 검색을 수행하는 공통 함수입니다
+func DoSearch(im *IndexManager, query string, opts *SearchOptions) ([]SearchResult, error) {
 	limit := 10
 	if opts != nil && opts.Limit > 0 {
 		limit = opts.Limit
 	}
 
-	docs, scores, err := s.indexManager.Search(query, limit)
+	docs, scores, err := im.Search(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -180,17 +161,4 @@ func (s *Searcher) Search(ctx context.Context, query string, opts *SearchOptions
 	}
 
 	return results, nil
-}
-
-func (s *Searcher) Close() error {
-	return s.indexManager.Close()
-}
-
-type FetchError struct {
-	URL        string
-	StatusCode int
-}
-
-func (e *FetchError) Error() string {
-	return "fetch error: " + e.URL
 }

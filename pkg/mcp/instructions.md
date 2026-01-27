@@ -118,6 +118,56 @@ Searches AppsInToss documentation using full-text search. Returns matching docum
 2. Review the search results ranked by relevance
 3. Use `get_docs` with the document `id` to retrieve full content if needed
 
+### search_tds_rn_docs
+
+Searches TDS (Toss Design System) React Native documentation using full-text search.
+
+**When to Use:**
+- When the project uses `@apps-in-toss/framework` (React Native based)
+- When users ask about TDS React Native components, hooks, or styling
+- When looking for UI component usage examples for native mini-apps
+
+**Parameters:**
+- `query` (required): Search query string
+- `limit` (optional): Maximum number of results to return (default: 10)
+
+**How to Use:**
+1. Check if the project is React Native based (uses `@apps-in-toss/framework`)
+2. Call `search_tds_rn_docs` with the relevant component or feature name
+3. Review the search results for component APIs and usage examples
+
+**Example Queries:**
+- "Button" - Find Button component documentation
+- "Toast" - Find Toast component usage
+- "Typography" - Find typography guidelines
+
+### search_tds_web_docs
+
+Searches TDS (Toss Design System) Web/Mobile documentation using full-text search.
+
+**When to Use:**
+- When the project uses `@apps-in-toss/web-framework` (WebView based)
+- When users ask about TDS Web components for WebView mini-apps
+- When looking for UI component usage examples for web-based mini-apps
+
+**Parameters:**
+- `query` (required): Search query string
+- `limit` (optional): Maximum number of results to return (default: 10)
+
+**How to Use:**
+1. Check if the project is Web based (uses `@apps-in-toss/web-framework`)
+2. Call `search_tds_web_docs` with the relevant component or feature name
+3. Review the search results for component APIs and usage examples
+
+### Choosing the Right TDS Search Tool
+
+| Project Type | Framework Package | TDS Search Tool |
+|--------------|-------------------|-----------------|
+| React Native | `@apps-in-toss/framework` | `search_tds_rn_docs` |
+| WebView | `@apps-in-toss/web-framework` | `search_tds_web_docs` |
+
+**Important:** Always check the project's `package.json` to determine which framework is being used before selecting the appropriate TDS search tool.
+
 ## Development Guidelines
 
 ### For New Mini-App Development

@@ -3,16 +3,19 @@ package search
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/toss/apps-in-toss-ax/internal/httputil"
 )
 
 const (
-	cacheSubDir      = "ax"
-	metadataFileName = "cache-metadata.json"
-	indexSubDir      = "search-index"
+	cacheSubDir = "ax"
+
+	// 기본 캐시 설정 (AppsInToss 문서용)
+	defaultMetadataFileName = "cache-metadata.json"
+	defaultIndexSubDir      = "search-index"
 )
 
 type CacheMetadata struct {
@@ -27,7 +30,22 @@ type CacheManager struct {
 	indexPath    string
 }
 
+// CacheConfig는 CacheManager 설정입니다
+type CacheConfig struct {
+	MetadataFileName string
+	IndexSubDir      string
+}
+
+// NewCacheManager는 기본 설정으로 CacheManager를 생성합니다
 func NewCacheManager() (*CacheManager, error) {
+	return NewCacheManagerWithConfig(CacheConfig{
+		MetadataFileName: defaultMetadataFileName,
+		IndexSubDir:      defaultIndexSubDir,
+	})
+}
+
+// NewCacheManagerWithConfig는 설정을 지정하여 CacheManager를 생성합니다
+func NewCacheManagerWithConfig(config CacheConfig) (*CacheManager, error) {
 	userCacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
@@ -40,8 +58,8 @@ func NewCacheManager() (*CacheManager, error) {
 
 	return &CacheManager{
 		cacheDir:     cacheDir,
-		metadataPath: filepath.Join(cacheDir, metadataFileName),
-		indexPath:    filepath.Join(cacheDir, indexSubDir),
+		metadataPath: filepath.Join(cacheDir, config.MetadataFileName),
+		indexPath:    filepath.Join(cacheDir, config.IndexSubDir),
 	}, nil
 }
 
@@ -87,28 +105,7 @@ func (cm *CacheManager) CheckETag(ctx context.Context, url string) (etag string,
 		return "", true, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
-	if err != nil {
-		return "", true, err
-	}
-
-	if cachedETag != "" {
-		req.Header.Set("If-None-Match", cachedETag)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", true, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotModified {
-		return cachedETag, false, nil
-	}
-
-	newETag := resp.Header.Get("ETag")
-	return newETag, true, nil
+	return httputil.CheckETag(ctx, url, cachedETag)
 }
 
 func (cm *CacheManager) IndexExists() bool {

@@ -7,19 +7,19 @@ import (
 	"github.com/toss/apps-in-toss-ax/pkg/search"
 )
 
-var searchDocs = &mcp.Tool{
-	Name:        "search_docs",
-	Title:       "Search AppsInToss Documents",
-	Description: "Search AppsInToss documentation using full-text search. Returns matching documents ranked by relevance.",
+var searchTdsWebDocs = &mcp.Tool{
+	Name:        "search_tds_web_docs",
+	Title:       "Search TDS Web Documents",
+	Description: "Search TDS (Toss Design System) Web documentation using full-text search. Returns matching documents ranked by relevance.",
 	Annotations: &mcp.ToolAnnotations{
-		Title:          "Search AppsInToss Documents",
+		Title:          "Search TDS Web Documents",
 		ReadOnlyHint:   true,
 		IdempotentHint: true,
 	},
 }
 
-func (p *Protocol) searchDocsHandler(ctx context.Context, r *mcp.CallToolRequest, input SearchInput) (result *mcp.CallToolResult, output SearchOutput, err error) {
-	searcher, err := search.New()
+func (p *Protocol) searchTdsWebDocsHandler(ctx context.Context, r *mcp.CallToolRequest, input SearchInput) (result *mcp.CallToolResult, output SearchOutput, err error) {
+	searcher, err := search.NewTDSMobileSearcher()
 	if err != nil {
 		return nil, SearchOutput{}, err
 	}

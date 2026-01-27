@@ -125,3 +125,88 @@ func extractTitleAndContent(body string) (title, content string) {
 	content = strings.TrimSpace(strings.Join(contentLines, "\n"))
 	return title, content
 }
+
+// TdsLlmsFullDocument는 TDS llms-full.txt의 개별 문서를 나타냅니다
+type TdsLlmsFullDocument struct {
+	URL     string
+	Title   string
+	Content string
+}
+
+// ParseTdsLlmsFull은 TDS llms-full.txt 형식을 파싱합니다
+// 형식:
+// # Title (/path/)
+// (내용...)
+// ---
+// # Title2 (/path2/)
+// (내용...)
+func ParseTdsLlmsFull(content string) []TdsLlmsFullDocument {
+	var documents []TdsLlmsFullDocument
+
+	// BOM 제거
+	content = strings.TrimPrefix(content, "\ufeff")
+
+	// --- 로 문서 분리
+	parts := strings.Split(content, "\n---\n")
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		doc := parseTdsDocument(part)
+		if doc.URL != "" && doc.Title != "" {
+			documents = append(documents, doc)
+		}
+	}
+
+	return documents
+}
+
+// parseTdsDocument는 개별 TDS 문서를 파싱합니다
+// 첫 줄: # Title (/path/)
+// 나머지: 내용
+func parseTdsDocument(content string) TdsLlmsFullDocument {
+	doc := TdsLlmsFullDocument{}
+
+	lines := strings.Split(content, "\n")
+	if len(lines) == 0 {
+		return doc
+	}
+
+	// 첫 줄에서 제목과 경로 추출
+	firstLine := strings.TrimSpace(lines[0])
+	if !strings.HasPrefix(firstLine, "# ") {
+		return doc
+	}
+
+	// "# Title (/path/)" 형식 파싱
+	titleLine := strings.TrimPrefix(firstLine, "# ")
+
+	// 괄호 안의 경로 찾기
+	pathStart := strings.LastIndex(titleLine, "(")
+	pathEnd := strings.LastIndex(titleLine, ")")
+
+	if pathStart == -1 || pathEnd == -1 || pathStart >= pathEnd {
+		return doc
+	}
+
+	doc.Title = strings.TrimSpace(titleLine[:pathStart])
+	path := strings.TrimSpace(titleLine[pathStart+1 : pathEnd])
+
+	// 상대 경로에 base URL 추가
+	if strings.HasPrefix(path, "/") {
+		doc.URL = tdsBaseURL + path
+	} else {
+		doc.URL = path
+	}
+
+	// 나머지 내용 추출
+	if len(lines) > 1 {
+		contentLines := lines[1:]
+		doc.Content = strings.TrimSpace(strings.Join(contentLines, "\n"))
+	}
+
+	return doc
+}

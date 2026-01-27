@@ -7,19 +7,19 @@ import (
 	"github.com/toss/apps-in-toss-ax/pkg/search"
 )
 
-var searchDocs = &mcp.Tool{
-	Name:        "search_docs",
-	Title:       "Search AppsInToss Documents",
-	Description: "Search AppsInToss documentation using full-text search. Returns matching documents ranked by relevance.",
+var searchTdsRnDocs = &mcp.Tool{
+	Name:        "search_tds_rn_docs",
+	Title:       "Search TDS React Native Documents",
+	Description: "Search TDS (Toss Design System) React Native documentation using full-text search. Returns matching documents ranked by relevance.",
 	Annotations: &mcp.ToolAnnotations{
-		Title:          "Search AppsInToss Documents",
+		Title:          "Search TDS React Native Documents",
 		ReadOnlyHint:   true,
 		IdempotentHint: true,
 	},
 }
 
-func (p *Protocol) searchDocsHandler(ctx context.Context, r *mcp.CallToolRequest, input SearchInput) (result *mcp.CallToolResult, output SearchOutput, err error) {
-	searcher, err := search.New()
+func (p *Protocol) searchTdsRnDocsHandler(ctx context.Context, r *mcp.CallToolRequest, input SearchInput) (result *mcp.CallToolResult, output SearchOutput, err error) {
+	searcher, err := search.NewTDSSearcher()
 	if err != nil {
 		return nil, SearchOutput{}, err
 	}

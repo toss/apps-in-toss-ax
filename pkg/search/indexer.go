@@ -177,14 +177,22 @@ func (im *IndexManager) IndexFromLlmsFullContent(content string, categoryMap map
 	return im.IndexDocuments(documents)
 }
 
+// URLTransformFunc는 URL을 변환하는 함수 타입입니다
+type URLTransformFunc func(string) string
+
 // BuildCategoryMap은 llms.txt 파싱 결과에서 URL → Category 매핑을 생성합니다
 func BuildCategoryMap(llmsTxt *llms.LlmsTxt) map[string]string {
+	return BuildCategoryMapWithURLTransform(llmsTxt, nil)
+}
+
+// BuildCategoryMapWithURLTransform은 URL 변환 함수를 적용하여 카테고리 맵을 생성합니다
+func BuildCategoryMapWithURLTransform(llmsTxt *llms.LlmsTxt, urlTransform URLTransformFunc) map[string]string {
 	categoryMap := make(map[string]string)
-	buildCategoryMapFromSections(llmsTxt.Sections, "", categoryMap)
+	buildCategoryMapFromSections(llmsTxt.Sections, "", categoryMap, urlTransform)
 	return categoryMap
 }
 
-func buildCategoryMapFromSections(sections []llms.Section, parentCategory string, categoryMap map[string]string) {
+func buildCategoryMapFromSections(sections []llms.Section, parentCategory string, categoryMap map[string]string, urlTransform URLTransformFunc) {
 	for _, section := range sections {
 		category := section.Title
 		if parentCategory != "" {
@@ -192,11 +200,15 @@ func buildCategoryMapFromSections(sections []llms.Section, parentCategory string
 		}
 
 		for _, link := range section.Links {
-			categoryMap[link.URL] = category
+			url := link.URL
+			if urlTransform != nil {
+				url = urlTransform(url)
+			}
+			categoryMap[url] = category
 		}
 
 		if len(section.Children) > 0 {
-			buildCategoryMapFromSections(section.Children, category, categoryMap)
+			buildCategoryMapFromSections(section.Children, category, categoryMap, urlTransform)
 		}
 	}
 }

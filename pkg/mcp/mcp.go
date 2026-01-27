@@ -54,6 +54,8 @@ func New(options ...Option) *Protocol {
 	mcp.AddTool(i, listExamples, p.listExamplesHandler)
 	mcp.AddTool(i, getExample, p.getExampleHandler)
 	mcp.AddTool(i, searchDocs, p.searchDocsHandler)
+	mcp.AddTool(i, searchTdsRnDocs, p.searchTdsRnDocsHandler)
+	mcp.AddTool(i, searchTdsWebDocs, p.searchTdsWebDocsHandler)
 
 	p.Server = i
 	return p
