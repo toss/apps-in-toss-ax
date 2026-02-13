@@ -13,3 +13,13 @@ type SearchOutput struct {
 	Results []search.SearchResult `json:"results"`
 	Total   int                   `json:"total"`
 }
+
+// GetDocInput은 문서 조회 도구의 입력 타입입니다
+type GetDocInput struct {
+	ID string `json:"id"`
+}
+
+// GetDocOutput은 문서 조회 도구의 출력 타입입니다
+type GetDocOutput struct {
+	Document *search.SearchResult `json:"document,omitempty"`
+}

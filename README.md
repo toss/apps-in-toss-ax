@@ -10,13 +10,14 @@ AX는 AI 어시스턴트에게 AppsInToss Developer Center의 문서와 예제�
 
 | 도구 | 설명 |
 |------|------|
-| `list_docs` | AppsInToss 개발자 센터 문서 목록 조회 |
-| `get_docs` | 특정 문서의 전체 내용 조회 |
+| `search_docs` | AppsInToss 문서 검색 |
+| `get_doc` | 검색 결과의 문서 전체 내용 조회 |
+| `search_tds_rn_docs` | TDS React Native 문서 검색 |
+| `get_tds_rn_doc` | TDS React Native 문서 전체 내용 조회 |
+| `search_tds_web_docs` | TDS Web 문서 검색 |
+| `get_tds_web_doc` | TDS Web 문서 전체 내용 조회 |
 | `list_examples` | 코드 예제 목록 조회 |
 | `get_example` | 특정 예제 코드 조회 |
-| `search_docs` | 문서 검색 |
-| `search_tds_rn_docs` | TDS React Native 문서 검색 |
-| `search_tds_web_docs` | TDS Web 문서 검색 |
 
 ### 지원 문서
 

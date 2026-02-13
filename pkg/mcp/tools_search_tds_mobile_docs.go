@@ -19,13 +19,8 @@ var searchTdsWebDocs = &mcp.Tool{
 }
 
 func (p *Protocol) searchTdsWebDocsHandler(ctx context.Context, r *mcp.CallToolRequest, input SearchInput) (result *mcp.CallToolResult, output SearchOutput, err error) {
-	searcher, err := search.NewTDSMobileSearcher()
+	searcher, err := p.tdsWeb.get(ctx)
 	if err != nil {
-		return nil, SearchOutput{}, err
-	}
-	defer searcher.Close()
-
-	if err := searcher.EnsureIndex(ctx); err != nil {
 		return nil, SearchOutput{}, err
 	}
 

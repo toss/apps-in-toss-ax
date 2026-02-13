@@ -2,15 +2,15 @@ package search
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"github.com/toss/apps-in-toss-ax/internal/httputil"
 	"github.com/toss/apps-in-toss-ax/pkg/llms"
 )
 
-const (
-	llmsUrl     = "https://developers-apps-in-toss.toss.im/llms.txt"
-	llmsFullUrl = "https://developers-apps-in-toss.toss.im/llms-full.txt"
-)
+// ContentIndexer는 llms-full.txt 내용을 IndexDocument 슬라이스로 변환하는 함수 타입입니다
+type ContentIndexer func(content string, categoryMap map[string]string) []IndexDocument
 
 type SearchResult struct {
 	ID          string  `json:"id"`
@@ -23,16 +23,21 @@ type SearchResult struct {
 }
 
 type SearchOptions struct {
-	Limit int
+	Limit           int
+	MaxContentLength int
 }
 
 type Searcher struct {
+	llmsFullUrl  string
+	llmsUrl      string
 	cacheManager *CacheManager
-	indexManager *IndexManager
+	indexManager  *IndexManager
+	indexer      ContentIndexer
+	urlTransform URLTransformFunc
 }
 
-func New() (*Searcher, error) {
-	cacheManager, err := NewCacheManager()
+func newSearcher(llmsFullUrl, llmsUrl string, cacheConfig CacheConfig, indexer ContentIndexer, urlTransform URLTransformFunc) (*Searcher, error) {
+	cacheManager, err := NewCacheManagerWithConfig(cacheConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -40,48 +45,90 @@ func New() (*Searcher, error) {
 	indexManager := NewIndexManager(cacheManager.IndexPath())
 
 	return &Searcher{
+		llmsFullUrl:  llmsFullUrl,
+		llmsUrl:      llmsUrl,
 		cacheManager: cacheManager,
-		indexManager: indexManager,
+		indexManager:  indexManager,
+		indexer:      indexer,
+		urlTransform: urlTransform,
 	}, nil
+}
+
+func New() (*Searcher, error) {
+	return newSearcher(
+		llmsFullUrl,
+		llmsUrl,
+		CacheConfig{
+			MetadataFileName: defaultMetadataFileName,
+			IndexSubDir:      defaultIndexSubDir,
+		},
+		appsInTossIndexer,
+		nil,
+	)
+}
+
+func NewTDSSearcher() (*Searcher, error) {
+	return newSearcher(
+		tdsReactNativeLlmsFullUrl,
+		tdsReactNativeLlmsUrl,
+		CacheConfig{
+			MetadataFileName: "tds-cache-metadata.json",
+			IndexSubDir:      "tds-search-index",
+		},
+		tdsIndexer,
+		tdsURLTransform,
+	)
+}
+
+func NewTDSMobileSearcher() (*Searcher, error) {
+	return newSearcher(
+		tdsMobileLlmsFullUrl,
+		tdsMobileLlmsUrl,
+		CacheConfig{
+			MetadataFileName: "tds-mobile-cache-metadata.json",
+			IndexSubDir:      "tds-mobile-search-index",
+		},
+		tdsIndexer,
+		tdsURLTransform,
+	)
 }
 
 func (s *Searcher) EnsureIndex(ctx context.Context) error {
 	indexExists := s.cacheManager.IndexExists()
 
 	if indexExists {
-		etag, changed, err := s.cacheManager.CheckETag(ctx, llmsFullUrl)
+		etag, changed, err := s.cacheManager.CheckETag(ctx, s.llmsFullUrl)
 		if err != nil {
 			if err := s.indexManager.OpenIndex(); err == nil {
 				return nil
 			}
-			return s.rebuildIndex(ctx)
+			return s.buildIndex(ctx)
 		}
 
 		if !changed {
-			return s.indexManager.OpenIndex()
+			if err := s.indexManager.OpenIndex(); err == nil {
+				return nil
+			}
+			_ = s.cacheManager.DeleteIndex()
+			return s.buildIndex(ctx)
 		}
 
 		if err := s.cacheManager.DeleteIndex(); err != nil {
 			return err
 		}
 
-		return s.buildIndex(ctx, etag)
+		return s.buildIndexWithETag(ctx, etag)
 	}
 
-	return s.rebuildIndex(ctx)
+	return s.buildIndex(ctx)
 }
 
-func (s *Searcher) rebuildIndex(ctx context.Context) error {
-	etag, _, err := s.cacheManager.CheckETag(ctx, llmsFullUrl)
-	if err != nil {
-		etag = ""
-	}
-	return s.buildIndex(ctx, etag)
+func (s *Searcher) buildIndex(ctx context.Context) error {
+	return s.buildIndexWithETag(ctx, "")
 }
 
-func (s *Searcher) buildIndex(ctx context.Context, etag string) error {
-	// llms-full.txt 가져오기
-	content, newETag, err := httputil.FetchWithETag(ctx, llmsFullUrl, 0)
+func (s *Searcher) buildIndexWithETag(ctx context.Context, etag string) error {
+	content, newETag, err := httputil.FetchWithETag(ctx, s.llmsFullUrl, 0)
 	if err != nil {
 		return err
 	}
@@ -90,20 +137,19 @@ func (s *Searcher) buildIndex(ctx context.Context, etag string) error {
 		etag = newETag
 	}
 
-	// llms.txt에서 카테고리 정보 가져오기
 	categoryMap := s.fetchCategoryMap(ctx)
 
 	if err := s.indexManager.CreateIndex(); err != nil {
 		return err
 	}
 
-	// llms-full.txt 형식을 직접 파싱하여 인덱싱 (카테고리 매핑 포함)
-	if err := s.indexManager.IndexFromLlmsFullContent(content, categoryMap); err != nil {
+	documents := s.indexer(content, categoryMap)
+	if err := s.indexManager.IndexDocuments(documents); err != nil {
 		return err
 	}
 
 	if etag != "" {
-		if err := s.cacheManager.SaveETag(llmsFullUrl, etag); err != nil {
+		if err := s.cacheManager.SaveETag(s.llmsFullUrl, etag); err != nil {
 			return err
 		}
 	}
@@ -111,9 +157,8 @@ func (s *Searcher) buildIndex(ctx context.Context, etag string) error {
 	return nil
 }
 
-// fetchCategoryMap은 llms.txt를 가져와서 URL → Category 매핑을 생성합니다
 func (s *Searcher) fetchCategoryMap(ctx context.Context) map[string]string {
-	content, _, err := httputil.FetchWithETag(ctx, llmsUrl, 0)
+	content, _, err := httputil.FetchWithETag(ctx, s.llmsUrl, 0)
 	if err != nil {
 		return nil
 	}
@@ -124,25 +169,24 @@ func (s *Searcher) fetchCategoryMap(ctx context.Context) map[string]string {
 		return nil
 	}
 
-	return BuildCategoryMap(llmsTxt)
+	return BuildCategoryMapWithURLTransform(llmsTxt, s.urlTransform)
 }
+
+const defaultMaxContentLength = 500
 
 func (s *Searcher) Search(ctx context.Context, query string, opts *SearchOptions) ([]SearchResult, error) {
-	return DoSearch(s.indexManager, query, opts)
-}
-
-func (s *Searcher) Close() error {
-	return s.indexManager.Close()
-}
-
-// DoSearch는 IndexManager를 사용하여 검색을 수행하는 공통 함수입니다
-func DoSearch(im *IndexManager, query string, opts *SearchOptions) ([]SearchResult, error) {
 	limit := 10
-	if opts != nil && opts.Limit > 0 {
-		limit = opts.Limit
+	maxContentLen := defaultMaxContentLength
+	if opts != nil {
+		if opts.Limit > 0 {
+			limit = opts.Limit
+		}
+		if opts.MaxContentLength > 0 {
+			maxContentLen = opts.MaxContentLength
+		}
 	}
 
-	docs, scores, err := im.Search(query, limit)
+	docs, scores, err := s.indexManager.Search(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +196,7 @@ func DoSearch(im *IndexManager, query string, opts *SearchOptions) ([]SearchResu
 		results[i] = SearchResult{
 			ID:          doc.ID,
 			Title:       doc.Title,
-			Content:     doc.Content,
+			Content:     truncateContent(doc.Content, maxContentLen),
 			Description: doc.Description,
 			URL:         doc.URL,
 			Category:    doc.Category,
@@ -161,4 +205,69 @@ func DoSearch(im *IndexManager, query string, opts *SearchOptions) ([]SearchResu
 	}
 
 	return results, nil
+}
+
+// truncateContent는 콘텐츠를 maxLen 룬 이하로 잘라냅니다.
+func truncateContent(content string, maxLen int) string {
+	runes := []rune(content)
+	if len(runes) <= maxLen {
+		return content
+	}
+	return string(runes[:maxLen]) + "..."
+}
+
+func (s *Searcher) GetDocument(ctx context.Context, id string) (*SearchResult, error) {
+	doc, err := s.indexManager.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if doc == nil {
+		return nil, nil
+	}
+
+	return &SearchResult{
+		ID:          doc.ID,
+		Title:       doc.Title,
+		Content:     doc.Content,
+		Description: doc.Description,
+		URL:         doc.URL,
+		Category:    doc.Category,
+	}, nil
+}
+
+func (s *Searcher) Close() error {
+	return s.indexManager.Close()
+}
+
+// NewTestSearcher는 테스트용 Searcher를 생성합니다.
+// 실제 HTTP 호출 없이 인덱스 파일을 미리 생성하여
+// EnsureIndex에서 OpenIndex가 성공하도록 합니다.
+func NewTestSearcher() (*Searcher, error) {
+	tempDir, err := os.MkdirTemp("", "test-searcher-*")
+	if err != nil {
+		return nil, err
+	}
+
+	indexPath := filepath.Join(tempDir, "test-index")
+
+	// 인덱스를 생성한 뒤 닫아서 파일만 남겨둔다.
+	// EnsureIndex → CheckETag 실패 → OpenIndex 경로로 진입하여 성공한다.
+	im := NewIndexManager(indexPath)
+	if err := im.CreateIndex(); err != nil {
+		return nil, err
+	}
+	im.Close()
+
+	cm := &CacheManager{
+		cacheDir:     tempDir,
+		metadataPath: filepath.Join(tempDir, "test-metadata.json"),
+		indexPath:    indexPath,
+	}
+
+	return &Searcher{
+		llmsFullUrl:  "https://test.invalid/llms-full.txt",
+		cacheManager: cm,
+		indexManager:  NewIndexManager(indexPath),
+		indexer:      appsInTossIndexer,
+	}, nil
 }

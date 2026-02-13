@@ -1,6 +1,8 @@
 package search
 
 import (
+	"os"
+
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
 	"github.com/blevesearch/bleve/v2/analysis/lang/cjk"
@@ -12,7 +14,35 @@ import (
 	"github.com/toss/apps-in-toss-ax/pkg/llms"
 )
 
-const cjkAnalyzerName = "cjk_analyzer"
+const (
+	cjkAnalyzerName = "cjk_analyzer"
+
+	llmsUrl     = "https://developers-apps-in-toss.toss.im/llms.txt"
+	llmsFullUrl = "https://developers-apps-in-toss.toss.im/llms-full.txt"
+)
+
+// appsInTossIndexer는 AppsInToss llms-full.txt 내용을 IndexDocument로 변환합니다
+func appsInTossIndexer(content string, categoryMap map[string]string) []IndexDocument {
+	parsedDocs := ParseLlmsFull(content)
+
+	var documents []IndexDocument
+	for _, doc := range parsedDocs {
+		category := ""
+		if categoryMap != nil {
+			category = categoryMap[doc.URL]
+		}
+
+		documents = append(documents, IndexDocument{
+			ID:       docid.Generate(doc.Title, doc.URL, category),
+			Title:    doc.Title,
+			Content:  doc.Content,
+			URL:      doc.URL,
+			Category: category,
+		})
+	}
+
+	return documents
+}
 
 type IndexDocument struct {
 	ID          string `json:"id"`
@@ -99,6 +129,11 @@ func (im *IndexManager) CreateIndex() error {
 	indexMapping, err := im.createIndexMapping()
 	if err != nil {
 		return err
+	}
+
+	// 기존 경로가 남아있으면 삭제 후 재생성
+	if _, statErr := os.Stat(im.indexPath); statErr == nil {
+		_ = os.RemoveAll(im.indexPath)
 	}
 
 	index, err := bleve.New(im.indexPath, indexMapping)
@@ -249,6 +284,41 @@ func indexDocsFromSections(sections []llms.Section, parentCategory string, docum
 
 func generateDocID(index int, url string) string {
 	return url
+}
+
+func (im *IndexManager) GetByID(id string) (*IndexDocument, error) {
+	query := bleve.NewDocIDQuery([]string{id})
+	searchRequest := bleve.NewSearchRequest(query)
+	searchRequest.Fields = []string{"title", "content", "description", "url", "category"}
+
+	searchResult, err := im.index.Search(searchRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(searchResult.Hits) == 0 {
+		return nil, nil
+	}
+
+	hit := searchResult.Hits[0]
+	doc := &IndexDocument{ID: hit.ID}
+	if v, ok := hit.Fields["title"].(string); ok {
+		doc.Title = v
+	}
+	if v, ok := hit.Fields["content"].(string); ok {
+		doc.Content = v
+	}
+	if v, ok := hit.Fields["description"].(string); ok {
+		doc.Description = v
+	}
+	if v, ok := hit.Fields["url"].(string); ok {
+		doc.URL = v
+	}
+	if v, ok := hit.Fields["category"].(string); ok {
+		doc.Category = v
+	}
+
+	return doc, nil
 }
 
 func (im *IndexManager) Search(query string, limit int) ([]IndexDocument, []float64, error) {
