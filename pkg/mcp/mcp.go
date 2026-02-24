@@ -48,6 +48,7 @@ type Protocol struct {
 	Transport mcp.Transport
 	Server    *mcp.Server
 
+	completions *CompletionRegistry
 	docSearcher *lazySearcher
 	tdsRn       *lazySearcher
 	tdsWeb      *lazySearcher
@@ -65,6 +66,7 @@ func New(options ...Option) *Protocol {
 	p := &Protocol{
 		Transport:   &mcp.StdioTransport{},
 		OnInit:      func(_ context.Context) {},
+		completions: NewCompletionRegistry(),
 		docSearcher: newLazySearcher(search.New),
 		tdsRn:       newLazySearcher(search.NewTDSSearcher),
 		tdsWeb:      newLazySearcher(search.NewTDSMobileSearcher),
@@ -81,11 +83,15 @@ func New(options ...Option) *Protocol {
 			Version: version,
 		},
 		&mcp.ServerOptions{
-			Instructions: instructions(),
-			HasPrompts:   true,
-			HasResources: true,
-			HasTools:     true,
+			Instructions:      instructions(),
+			HasPrompts:        true,
+			HasResources:      true,
+			HasTools:          true,
+			CompletionHandler: p.completions.Handler,
 		})
+
+	i.AddPrompt(miniappActionPlan, miniappActionPlanHandler)
+	p.completions.RegisterAll(miniappActionPlanCompletions)
 
 	mcp.AddTool(i, listExamples, p.listExamplesHandler)
 	mcp.AddTool(i, getExample, p.getExampleHandler)
