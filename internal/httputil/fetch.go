@@ -6,9 +6,14 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
-const DefaultTimeout = 30 * time.Second
+const (
+	DefaultTimeout = 10 * time.Second
+	maxRetries     = 3
+)
 
 // FetchError는 HTTP 요청 실패 시 반환되는 에러입니다
 type FetchError struct {
@@ -28,7 +33,16 @@ func (e *FetchError) Unwrap() error {
 	return e.Err
 }
 
-// FetchWithETag는 URL에서 콘텐츠를 가져오고 ETag를 반환합니다
+func newRetryClient(timeout time.Duration) *http.Client {
+	rc := retryablehttp.NewClient()
+	rc.RetryMax = maxRetries
+	rc.HTTPClient.Timeout = timeout
+	NewRetryLogger().Apply(rc)
+	return rc.StandardClient()
+}
+
+// FetchWithETag는 URL에서 콘텐츠를 가져오고 ETag를 반환합니다.
+// Exponential backoff로 최대 3회 재시도합니다.
 func FetchWithETag(ctx context.Context, url string, timeout time.Duration) (content string, etag string, err error) {
 	if timeout == 0 {
 		timeout = DefaultTimeout
@@ -39,8 +53,7 @@ func FetchWithETag(ctx context.Context, url string, timeout time.Duration) (cont
 		return "", "", &FetchError{URL: url, Err: err}
 	}
 
-	client := &http.Client{Timeout: timeout}
-	resp, err := client.Do(req)
+	resp, err := newRetryClient(timeout).Do(req)
 	if err != nil {
 		return "", "", &FetchError{URL: url, Err: err}
 	}
@@ -58,8 +71,9 @@ func FetchWithETag(ctx context.Context, url string, timeout time.Duration) (cont
 	return string(body), resp.Header.Get("ETag"), nil
 }
 
-// CheckETag는 URL의 ETag가 변경되었는지 확인합니다
-// cachedETag가 비어있으면 항상 changed=true를 반환합니다
+// CheckETag는 URL의 ETag가 변경되었는지 확인합니다.
+// cachedETag가 비어있으면 항상 changed=true를 반환합니다.
+// Exponential backoff로 최대 3회 재시도합니다.
 func CheckETag(ctx context.Context, url string, cachedETag string) (etag string, changed bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
 	if err != nil {
@@ -70,8 +84,7 @@ func CheckETag(ctx context.Context, url string, cachedETag string) (etag string,
 		req.Header.Set("If-None-Match", cachedETag)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := newRetryClient(DefaultTimeout).Do(req)
 	if err != nil {
 		return "", true, &FetchError{URL: url, Err: err}
 	}
@@ -81,6 +94,5 @@ func CheckETag(ctx context.Context, url string, cachedETag string) (etag string,
 		return cachedETag, false, nil
 	}
 
-	newETag := resp.Header.Get("ETag")
-	return newETag, true, nil
+	return resp.Header.Get("ETag"), true, nil
 }

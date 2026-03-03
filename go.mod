@@ -6,7 +6,9 @@ require (
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/go-errors/errors v1.5.1
 	github.com/google/go-github/v62 v62.0.0
+	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/modelcontextprotocol/go-sdk v1.3.1
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.1
 	github.com/yuin/goldmark v1.7.13
 	golang.org/x/oauth2 v0.30.0
@@ -35,6 +37,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v0.0.0-20171115153421-f7279a603ede // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
