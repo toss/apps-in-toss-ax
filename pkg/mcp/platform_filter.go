@@ -55,8 +55,8 @@ func filterByPlatform(results []search.SearchResult, platform string) []search.S
 var platformOverrides = map[string]string{
 	// WebView props is common (RN also uses WebView)
 	"https://developers-apps-in-toss.toss.im/bedrock/reference/framework/속성 제어/webview-props.md": "common",
-	// Banner ads are platform-specific
-	"https://developers-apps-in-toss.toss.im/bedrock/reference/framework/광고/bannerAd.md":    "web",
+	// Banner ads are platform-specific (keys must be lowercase to match strings.ToLower)
+	"https://developers-apps-in-toss.toss.im/bedrock/reference/framework/광고/bannerad.md":    "web",
 	"https://developers-apps-in-toss.toss.im/bedrock/reference/framework/광고/rn-bannerad.md": "rn",
 	// Environment variables (React Native)
 	"https://developers-apps-in-toss.toss.im/bedrock/reference/framework/환경 변수/env.md": "rn",
