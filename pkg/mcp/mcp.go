@@ -48,6 +48,7 @@ type Protocol struct {
 	Transport mcp.Transport
 	Server    *mcp.Server
 
+	platform    string // "web", "rn", or "" (all)
 	completions *CompletionRegistry
 	docSearcher *lazySearcher
 	tdsRn       *lazySearcher
@@ -59,6 +60,14 @@ type Option func(*Protocol)
 func WithTransport(transport mcp.Transport) Option {
 	return func(s *Protocol) {
 		s.Transport = transport
+	}
+}
+
+// WithPlatform filters tools and search results by platform.
+// Supported values: "web", "rn" (react-native), "" (all).
+func WithPlatform(platform string) Option {
+	return func(s *Protocol) {
+		s.platform = platform
 	}
 }
 
@@ -93,14 +102,23 @@ func New(options ...Option) *Protocol {
 	i.AddPrompt(miniappActionPlan, miniappActionPlanHandler)
 	p.completions.RegisterAll(miniappActionPlanCompletions)
 
+	// Common tools (always registered)
 	mcp.AddTool(i, listExamples, p.listExamplesHandler)
 	mcp.AddTool(i, getExample, p.getExampleHandler)
 	mcp.AddTool(i, searchDocs, p.searchDocsHandler)
-	mcp.AddTool(i, searchTdsRnDocs, p.searchTdsRnDocsHandler)
-	mcp.AddTool(i, searchTdsWebDocs, p.searchTdsWebDocsHandler)
 	mcp.AddTool(i, getDoc, p.getDocHandler)
-	mcp.AddTool(i, getTdsRnDoc, p.getTdsRnDocHandler)
-	mcp.AddTool(i, getTdsWebDoc, p.getTdsWebDocHandler)
+
+	// Platform-specific TDS tools
+	if p.platform != "web" {
+		// Register RN tools unless platform is "web"
+		mcp.AddTool(i, searchTdsRnDocs, p.searchTdsRnDocsHandler)
+		mcp.AddTool(i, getTdsRnDoc, p.getTdsRnDocHandler)
+	}
+	if p.platform != "rn" {
+		// Register Web tools unless platform is "rn"
+		mcp.AddTool(i, searchTdsWebDocs, p.searchTdsWebDocsHandler)
+		mcp.AddTool(i, getTdsWebDoc, p.getTdsWebDocHandler)
+	}
 
 	p.Server = i
 	return p
