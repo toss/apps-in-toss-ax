@@ -36,6 +36,11 @@ func (p *Protocol) searchDocsHandler(ctx context.Context, r *mcp.CallToolRequest
 		return nil, SearchOutput{}, err
 	}
 
+	// Platform-based filtering
+	if p.platform != "" {
+		results = filterByPlatform(results, p.platform)
+	}
+
 	return nil, SearchOutput{
 		Results: results,
 		Total:   len(results),
