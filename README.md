@@ -58,7 +58,7 @@ ax mcp start
 
 ### Cursor/Claude에서 사용
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/ko/install-mcp?name=apps-in-toss&config=eyJjb21tYW5kIjoiYXggbWNwIHN0YXJ0In0%3D)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=apps-in-toss&config=eyJjb21tYW5kIjoiYXgiLCJhcmdzIjpbIm1jcCIsInN0YXJ0Il19)
 
 또는 `.cursor/mcp.json` / `claude_desktop_config.json`에 다음을 추가하세요:
 
