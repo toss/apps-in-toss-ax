@@ -53,8 +53,12 @@ npm install -g @apps-in-toss/ax
 ### MCP 서버 시작
 
 ```bash
-ax mcp start
+ax mcp
+ax mcp --disable-usage-stats
 ```
+
+AX는 제품 개선과 안정적인 운영을 위해 명령 실행, MCP 도구 호출, 성공 여부, 실행 시간 같은 사용 통계를 수집합니다.
+사용 통계 수집을 원하지 않으면 `--disable-usage-stats` 옵션을 추가하세요.
 
 ### Cursor/Claude에서 사용
 
@@ -68,7 +72,7 @@ ax mcp start
     "apps-in-toss": {
       "command": "ax",
       "args": [
-        "mcp", "start"
+        "mcp"
       ]
     }
   }
