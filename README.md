@@ -42,12 +42,6 @@ scoop bucket add toss https://github.com/toss/scoop-bucket
 scoop install ax
 ```
 
-### npm
-
-```bash
-npm install -g @apps-in-toss/ax
-```
-
 ## 사용법
 
 ### MCP 서버 시작
