@@ -51,7 +51,6 @@ func NewCommand(cfg CommandConfig) *cobra.Command {
 	cmd.AddCommand(NewVersionCommand())
 	cmd.AddCommand(NewSearchCommand())
 	cmd.AddCommand(NewGetCommand())
-	cmd.AddCommand(NewListCommand())
 
 	return cmd
 }
