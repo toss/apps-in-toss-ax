@@ -11,7 +11,6 @@ import (
 const (
 	llmsUrl           = "https://developers-apps-in-toss.toss.im/llms.txt"
 	llmsFullUrl       = "https://developers-apps-in-toss.toss.im/llms-full.txt"
-	examplesUrl       = "https://developers-apps-in-toss.toss.im/tutorials/examples.md"
 	tdsReactNativeUrl = "https://tossmini-docs.toss.im/tds-react-native/llms-full.txt"
 	tdsWebUrl         = "https://tossmini-docs.toss.im/tds-mobile/llms-full.txt"
 )
@@ -32,14 +31,6 @@ func (docs *AppsInTossDocs) GetLLMsRoot(ctx context.Context) ([]LlmDocument, err
 
 func (docs *AppsInTossDocs) GetLLMsFull(ctx context.Context) (*llms.LlmsTxt, error) {
 	return llms.NewReader().ReadLlms(ctx, llmsFullUrl)
-}
-
-func (docs *AppsInTossDocs) GetExamples(ctx context.Context) ([]LlmDocument, error) {
-	examples, err := llms.NewReader().ReadLlms(ctx, examplesUrl)
-	if err != nil {
-		return nil, err
-	}
-	return flattenToDocuments(examples.Sections), nil
 }
 
 func (docs *AppsInTossDocs) GetTDSReactNative(ctx context.Context) (*llms.LlmsTxt, error) {
@@ -66,20 +57,6 @@ func (docs *AppsInTossDocs) GetDocument(ctx context.Context, docId string) (stri
 	}
 
 	return "", errors.New("document not found")
-}
-
-func (docs *AppsInTossDocs) GetExample(ctx context.Context, exampleId string) (string, error) {
-	examples, err := docs.GetExamples(ctx)
-	if err != nil {
-		return "", err
-	}
-	for _, example := range examples {
-		if example.ID == exampleId {
-			return llms.NewReader().ReadLlmsRaw(ctx, example.URL)
-		}
-	}
-
-	return "", errors.New("example not found")
 }
 
 type LlmDocument struct {
