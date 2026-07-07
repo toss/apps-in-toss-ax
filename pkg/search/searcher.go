@@ -23,15 +23,43 @@ type SearchResult struct {
 }
 
 type SearchOptions struct {
-	Limit           int
+	Limit            int
 	MaxContentLength int
+	Boosts           BoostOverrides
+}
+
+// BoostOverrides는 필드별 부스트 재정의 값입니다.
+// nil인 필드는 기본값(DefaultFieldBoosts)을 사용합니다.
+type BoostOverrides struct {
+	Title       *float64
+	Description *float64
+	Content     *float64
+	Category    *float64
+}
+
+// resolve는 재정의 값을 기본값과 병합해 최종 가중치를 계산합니다
+func (b BoostOverrides) resolve() FieldBoosts {
+	boosts := DefaultFieldBoosts()
+	if b.Title != nil {
+		boosts.Title = *b.Title
+	}
+	if b.Description != nil {
+		boosts.Description = *b.Description
+	}
+	if b.Content != nil {
+		boosts.Content = *b.Content
+	}
+	if b.Category != nil {
+		boosts.Category = *b.Category
+	}
+	return boosts
 }
 
 type Searcher struct {
 	llmsFullUrl  string
 	llmsUrl      string
 	cacheManager *CacheManager
-	indexManager  *IndexManager
+	indexManager *IndexManager
 	indexer      ContentIndexer
 	urlTransform URLTransformFunc
 }
@@ -48,7 +76,7 @@ func newSearcher(llmsFullUrl, llmsUrl string, cacheConfig CacheConfig, indexer C
 		llmsFullUrl:  llmsFullUrl,
 		llmsUrl:      llmsUrl,
 		cacheManager: cacheManager,
-		indexManager:  indexManager,
+		indexManager: indexManager,
 		indexer:      indexer,
 		urlTransform: urlTransform,
 	}, nil
@@ -177,6 +205,7 @@ const defaultMaxContentLength = 500
 func (s *Searcher) Search(ctx context.Context, query string, opts *SearchOptions) ([]SearchResult, error) {
 	limit := 10
 	maxContentLen := defaultMaxContentLength
+	boosts := DefaultFieldBoosts()
 	if opts != nil {
 		if opts.Limit > 0 {
 			limit = opts.Limit
@@ -184,9 +213,10 @@ func (s *Searcher) Search(ctx context.Context, query string, opts *SearchOptions
 		if opts.MaxContentLength > 0 {
 			maxContentLen = opts.MaxContentLength
 		}
+		boosts = opts.Boosts.resolve()
 	}
 
-	docs, scores, err := s.indexManager.Search(query, limit)
+	docs, scores, err := s.indexManager.SearchWithBoosts(query, limit, boosts)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +297,7 @@ func NewTestSearcher() (*Searcher, error) {
 	return &Searcher{
 		llmsFullUrl:  "https://test.invalid/llms-full.txt",
 		cacheManager: cm,
-		indexManager:  NewIndexManager(indexPath),
+		indexManager: NewIndexManager(indexPath),
 		indexer:      appsInTossIndexer,
 	}, nil
 }

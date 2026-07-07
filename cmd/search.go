@@ -10,77 +10,67 @@ import (
 
 type searcherFactory func() (*search.Searcher, error)
 
+type searchFlags struct {
+	query            string
+	limit            int
+	titleBoost       float64
+	descriptionBoost float64
+	contentBoost     float64
+	categoryBoost    float64
+}
+
+func (f *searchFlags) register(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&f.query, "query", "", "Search query (required)")
+	cmd.Flags().IntVar(&f.limit, "limit", 10, "Maximum number of results")
+	cmd.Flags().Float64Var(&f.titleBoost, "title-boost", search.DefaultTitleBoost, "Relevance boost for title matches")
+	cmd.Flags().Float64Var(&f.descriptionBoost, "description-boost", search.DefaultDescriptionBoost, "Relevance boost for description matches")
+	cmd.Flags().Float64Var(&f.contentBoost, "content-boost", search.DefaultContentBoost, "Relevance boost for content matches")
+	cmd.Flags().Float64Var(&f.categoryBoost, "category-boost", search.DefaultCategoryBoost, "Relevance boost for category matches")
+	cmd.MarkFlagRequired("query")
+}
+
+func (f *searchFlags) options() *search.SearchOptions {
+	return &search.SearchOptions{
+		Limit: f.limit,
+		Boosts: search.BoostOverrides{
+			Title:       &f.titleBoost,
+			Description: &f.descriptionBoost,
+			Content:     &f.contentBoost,
+			Category:    &f.categoryBoost,
+		},
+	}
+}
+
 func NewSearchCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
 		Short: "Search AppsInToss documentation",
 	}
 
-	cmd.AddCommand(newSearchDocsCommand())
-	cmd.AddCommand(newSearchTdsRnCommand())
-	cmd.AddCommand(newSearchTdsWebCommand())
+	cmd.AddCommand(newSearchSubCommand("docs", "Search AppsInToss documentation", search.New))
+	cmd.AddCommand(newSearchSubCommand("tds-rn", "Search TDS React Native documentation", search.NewTDSSearcher))
+	cmd.AddCommand(newSearchSubCommand("tds-web", "Search TDS Web documentation", search.NewTDSMobileSearcher))
 
 	return cmd
 }
 
-func newSearchDocsCommand() *cobra.Command {
-	var query string
-	var limit int
+func newSearchSubCommand(use, short string, factory searcherFactory) *cobra.Command {
+	var flags searchFlags
 
 	cmd := &cobra.Command{
-		Use:   "docs",
-		Short: "Search AppsInToss documentation",
+		Use:   use,
+		Short: short,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSearch(cmd, search.New, query, limit)
+			return runSearch(cmd, factory, &flags)
 		},
 	}
 
-	cmd.Flags().StringVar(&query, "query", "", "Search query (required)")
-	cmd.Flags().IntVar(&limit, "limit", 10, "Maximum number of results")
-	cmd.MarkFlagRequired("query")
+	flags.register(cmd)
 
 	return cmd
 }
 
-func newSearchTdsRnCommand() *cobra.Command {
-	var query string
-	var limit int
-
-	cmd := &cobra.Command{
-		Use:   "tds-rn",
-		Short: "Search TDS React Native documentation",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSearch(cmd, search.NewTDSSearcher, query, limit)
-		},
-	}
-
-	cmd.Flags().StringVar(&query, "query", "", "Search query (required)")
-	cmd.Flags().IntVar(&limit, "limit", 10, "Maximum number of results")
-	cmd.MarkFlagRequired("query")
-
-	return cmd
-}
-
-func newSearchTdsWebCommand() *cobra.Command {
-	var query string
-	var limit int
-
-	cmd := &cobra.Command{
-		Use:   "tds-web",
-		Short: "Search TDS Web documentation",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSearch(cmd, search.NewTDSMobileSearcher, query, limit)
-		},
-	}
-
-	cmd.Flags().StringVar(&query, "query", "", "Search query (required)")
-	cmd.Flags().IntVar(&limit, "limit", 10, "Maximum number of results")
-	cmd.MarkFlagRequired("query")
-
-	return cmd
-}
-
-func runSearch(cmd *cobra.Command, factory searcherFactory, query string, limit int) error {
+func runSearch(cmd *cobra.Command, factory searcherFactory, flags *searchFlags) error {
 	ctx := cmd.Context()
 
 	s, err := factory()
@@ -93,7 +83,7 @@ func runSearch(cmd *cobra.Command, factory searcherFactory, query string, limit 
 		return err
 	}
 
-	results, err := s.Search(ctx, query, &search.SearchOptions{Limit: limit})
+	results, err := s.Search(ctx, flags.query, flags.options())
 	if err != nil {
 		return err
 	}
