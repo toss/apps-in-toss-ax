@@ -1,6 +1,8 @@
 package search
 
 import (
+	"fmt"
+	"math"
 	"os"
 
 	"github.com/blevesearch/bleve/v2"
@@ -321,32 +323,97 @@ func (im *IndexManager) GetByID(id string) (*IndexDocument, error) {
 	return doc, nil
 }
 
+// 필드별 부스트 기본값입니다
+const (
+	DefaultTitleBoost       = 5.0
+	DefaultDescriptionBoost = 1.5
+	DefaultContentBoost     = 1.0
+	DefaultCategoryBoost    = 1.0
+)
+
+// MaxFieldBoost는 필드 부스트의 상한입니다.
+// 유한하더라도 극단적으로 큰 값(boost*idf가 sqrt(MaxFloat64) ≈ 1.34e154를 넘는 경우)은
+// bleve의 sumOfSquaredWeights를 +Inf로 오버플로시켜 모든 점수를 0 또는 NaN으로 만듭니다.
+const MaxFieldBoost = 1e6
+
+// FieldBoosts는 검색 시 필드별 가중치입니다
+type FieldBoosts struct {
+	Title       float64
+	Description float64
+	Content     float64
+	Category    float64
+}
+
+// DefaultFieldBoosts는 기본 필드 가중치를 반환합니다
+func DefaultFieldBoosts() FieldBoosts {
+	return FieldBoosts{
+		Title:       DefaultTitleBoost,
+		Description: DefaultDescriptionBoost,
+		Content:     DefaultContentBoost,
+		Category:    DefaultCategoryBoost,
+	}
+}
+
+// validate는 모든 부스트가 [0, MaxFieldBoost] 범위의 값이고, 최소 하나는 양수인지 확인합니다.
+// NaN/Inf/과대 부스트나 전부 0인 부스트는 bleve의 쿼리 정규화(1/sqrt(sumOfSquaredWeights))를
+// 오염시켜 모든 점수를 0 또는 NaN으로 만들고, NaN은 JSON 직렬화 실패로 이어집니다.
+func (fb FieldBoosts) validate() error {
+	fields := []struct {
+		name  string
+		value float64
+	}{
+		{"title", fb.Title},
+		{"description", fb.Description},
+		{"content", fb.Content},
+		{"category", fb.Category},
+	}
+	sum := 0.0
+	for _, f := range fields {
+		if math.IsNaN(f.value) || f.value < 0 || f.value > MaxFieldBoost {
+			return fmt.Errorf("%s boost must be a number between 0 and %v, got %v", f.name, float64(MaxFieldBoost), f.value)
+		}
+		sum += f.value
+	}
+	if sum == 0 {
+		return fmt.Errorf("at least one field boost must be > 0")
+	}
+	return nil
+}
+
 func (im *IndexManager) Search(query string, limit int) ([]IndexDocument, []float64, error) {
+	return im.SearchWithBoosts(query, limit, DefaultFieldBoosts())
+}
+
+func (im *IndexManager) SearchWithBoosts(query string, limit int, boosts FieldBoosts) ([]IndexDocument, []float64, error) {
+	if err := boosts.validate(); err != nil {
+		return nil, nil, err
+	}
+
 	// 여러 필드에서 검색하기 위해 DisjunctionQuery 사용
 	// 검색용 analyzer 사용 (edgengram 제외)
 	titleQuery := bleve.NewMatchQuery(query)
 	titleQuery.SetField("title")
 	titleQuery.Analyzer = "cjk_search"
-	titleQuery.SetBoost(5.0)
+	titleQuery.SetBoost(boosts.Title)
 
 	descQuery := bleve.NewMatchQuery(query)
 	descQuery.SetField("description")
 	descQuery.Analyzer = "cjk_search"
 	descQuery.SetAutoFuzziness(true)
 	descQuery.SetPrefix(1)
-	descQuery.SetBoost(1.5)
+	descQuery.SetBoost(boosts.Description)
 
 	contentQuery := bleve.NewMatchQuery(query)
 	contentQuery.SetField("content")
 	contentQuery.Analyzer = "cjk_search"
 	contentQuery.SetAutoFuzziness(true)
 	contentQuery.SetPrefix(1)
-	contentQuery.SetBoost(1.0)
+	contentQuery.SetBoost(boosts.Content)
 
 	categoryQuery := bleve.NewMatchQuery(query)
 	categoryQuery.SetField("category")
 	categoryQuery.Analyzer = "cjk_search"
-	categoryQuery.SetBoost(1.0)
+	categoryQuery.SetBoost(boosts.Category)
 
 	searchQuery := bleve.NewDisjunctionQuery(titleQuery, descQuery, contentQuery, categoryQuery)
 	searchRequest := bleve.NewSearchRequestOptions(searchQuery, limit, 0, false)

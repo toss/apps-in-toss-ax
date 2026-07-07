@@ -75,6 +75,16 @@ A format where games developed with the Unity game engine are built as WebGL and
 3. **Avoid English translations of Korean concepts.** Searching in English will return poor results and waste tokens.
 4. **Use concise Korean keywords**, not full sentences. Prefer `결제 연동 가이드` over `토스페이 결제를 연동하는 방법에 대해서 알려주세요`.
 
+### Tuning Relevance Boosts
+
+Every search tool accepts optional per-field relevance boosts: `title_boost` (default 5.0), `description_boost` (default 1.5), `content_boost` (default 1.0), `category_boost` (default 1.0). All values must be between 0 and 1000000, and at least one boost must remain > 0 (setting all four to 0 is rejected).
+
+Start with the defaults. If the top results look off, retry the same query with adjusted boosts:
+
+- Query names a specific document or component (e.g. `Button`, `결제 연동`) → raise `title_boost` or keep defaults.
+- Query is an error message, API signature, or code identifier that appears inside document bodies → raise `content_boost` (e.g. 3.0) and lower `title_boost` (e.g. 1.0).
+- Results from an irrelevant category dominate → lower `category_boost` to 0.
+
 ## Tool Usage Guide
 
 ### search_docs
@@ -89,6 +99,7 @@ Searches AppsInToss documentation using full-text search. Returns matching docum
 **Parameters:**
 - `query` (required): Search query string
 - `limit` (optional): Maximum number of results to return (default: 10)
+- `title_boost`, `description_boost`, `content_boost`, `category_boost` (optional): Per-field relevance boosts (see "Tuning Relevance Boosts")
 
 **Return Information:**
 - Search results ranked by relevance score
@@ -123,6 +134,7 @@ Searches TDS (Toss Design System) React Native documentation using full-text sea
 **Parameters:**
 - `query` (required): Search query string
 - `limit` (optional): Maximum number of results to return (default: 10)
+- `title_boost`, `description_boost`, `content_boost`, `category_boost` (optional): Per-field relevance boosts (see "Tuning Relevance Boosts")
 
 **How to Use:**
 1. Check if the project is React Native based (uses `@apps-in-toss/framework`)
@@ -157,6 +169,7 @@ Searches TDS (Toss Design System) Web/Mobile documentation using full-text searc
 **Parameters:**
 - `query` (required): Search query string
 - `limit` (optional): Maximum number of results to return (default: 10)
+- `title_boost`, `description_boost`, `content_boost`, `category_boost` (optional): Per-field relevance boosts (see "Tuning Relevance Boosts")
 
 **How to Use:**
 1. Check if the project is Web based (uses `@apps-in-toss/web-framework`)
