@@ -11,47 +11,23 @@ This MCP Agent supports mini-app development for AppsInToss. It provides access 
 **AppsInToss** is a **platform that allows you to provide mini-apps within the Toss app**, operated by Viva Republica. You can expose your service to 30 million Toss users and develop quickly using SDKs and APIs.
 
 - Mini-apps operate as App-in-App within the Toss app
-- You can develop using React Native or WebView
-
-### Bedrock & Granite
-
-**Bedrock** is the **former name** of the framework for AppsInToss mini-app development.
-
-**Granite** is the **rebranded name** for Bedrock, representing the new name for the same framework.
-
-**Important:**
-- **Framework 1.0 and above** must use **Granite**
-- Existing Bedrock-based projects are recommended to migrate to Granite
-- In documentation, Bedrock and Granite refer to the same framework, with names varying by version
-
-**Examples:**
-- "Using the Bedrock framework" (legacy, framework < 1.0) ✓
-- "Using the Granite framework" (current, framework >= 1.0) ✓
-- Always use Granite for new projects
+- You can develop using Web (WebView) or React Native
+- **Web (WebView) is the recommended default for mini-app development**
 
 ### TDS (Toss Design System)
 
-**TDS** stands for **Toss Design System**, the design system of Toss.
-
-**Important Guidelines:**
-- **Non-game mini-apps** **must use TDS**
-- TDS provides a consistent Toss UX and is required for review approval
+**TDS** stands for **Toss Design System**, the design system of Toss. TDS provides a consistent Toss UX. Using TDS is optional.
 
 **TDS Documentation:**
 - For React Native: `tossmini-docs.toss.im/tds-react-native`
 - For Web: `tossmini-docs.toss.im/tds-mobile`
 
-**TDS Package Usage Guide:**
+**TDS Packages:**
 
-| Platform | Framework Version | TDS Package |
+| Platform | Framework Package | TDS Package |
 |----------|-------------------|-------------|
-| React Native | `@apps-in-toss/framework` < 1.0.0 | `@toss-design-system/react-native` |
-| React Native | `@apps-in-toss/framework` >= 1.0.0 | `@toss/tds-react-native` |
-| Web | `@apps-in-toss/web-framework` < 1.0.0 | `@toss-design-system/mobile` |
-| Web | `@apps-in-toss/web-framework` >= 1.0.0 | `@toss/tds-mobile` |
-
-- `@toss/tds-react-native`: TDS React Native version for native mini-apps
-- `@toss/tds-mobile`: TDS Web version for WebView mini-apps
+| React Native | `@apps-in-toss/framework` | `@toss/tds-react-native` |
+| Web | `@apps-in-toss/web-framework` | `@toss/tds-mobile` |
 
 **Migration Note:**
 If documentation or code examples use import statements from a different TDS package version, first try simply replacing the package name while keeping the same component imports. The component APIs are largely compatible between versions.
@@ -200,19 +176,14 @@ Retrieves the full content of a TDS Web document by its ID.
 
 ### For New Mini-App Development
 
-1. **Framework Selection**: Use Granite (framework 1.0 or above)
-2. **Design System**: TDS is required for non-game apps
-3. **Development Approach**:
-   - React Native based: Near-native performance
-   - WebView based: Leverage web technologies
+**Default to Web (WebView)** (`@apps-in-toss/web-framework`). It lets you leverage familiar web technologies and iterate quickly. Use React Native only when the user explicitly wants it or the project already uses it.
 
 ### Game vs Non-Game Services
 
 | Category | Game | Non-Game |
 |----------|------|----------|
-| TDS Usage | Optional | **Required** |
 | Unity Support | O (WebGL) | X |
-| Development Method | Unity/WebView | React Native/WebView |
+| Development Method | Unity/WebView | WebView/React Native |
 
 ### Document Categories by Feature
 
@@ -220,7 +191,7 @@ Refer to these categories when searching for documents:
 
 - **Getting Started**: AppsInToss overview, launch process, launch policies
 - **Development**: Dev server connection, routing, query parameters
-- **Framework**: Bedrock/Granite reference
+- **Framework**: mini-app framework reference
 - **Authentication**: Toss authentication, identity verification
 - **Payment**: TossPay, in-app purchases
 - **Advertising**: AdMob integration
@@ -236,15 +207,14 @@ Refer to these categories when searching for documents:
 4. Provide accurate information based on the full document content
 5. Include original document URLs when necessary
 
+### Platform Guidance
+
+When developers ask which platform to choose:
+- Default to Web (`@apps-in-toss/web-framework`)
+- Suggest React Native only when the user explicitly wants it or the project already uses it
+
 ### TDS Guidance
 
-When answering questions about non-game mini-app development:
-- Inform that TDS usage is required
-- Provide relevant TDS documentation URLs
-- Clarify that TDS is optional for games
-
-### Bedrock/Granite Distinction
-
-- Legacy code questions: Bedrock terminology is acceptable
-- New development guides: Granite terminology is recommended
-- Use appropriate terminology after checking the version
+When answering questions about mini-app development:
+- TDS usage is optional
+- Provide relevant TDS documentation URLs when the developer chooses to use TDS

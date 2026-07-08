@@ -21,13 +21,13 @@ Run the following command to scaffold a new AppsInToss mini-app:
 {{init_command}}
 ```
 
-This will create the project structure with the Granite framework (framework >= 1.0).
+This will create the mini-app project structure.
 
 ### 1.2 Checklist
 
 - [ ] `{{init_command}}` 실행 완료
 - [ ] `granite.config.ts` 파일 생성 확인
-- [ ] `package.json`에 `{{framework_package}}` >= 1.0.0 의존성 확인
+- [ ] `package.json`에 `{{framework_package}}` >= 2.0.0 의존성 확인
 
 ---
 
@@ -39,9 +39,9 @@ This will create the project structure with the Granite framework (framework >= 
 {{package_manager}} install
 ```
 
-### 2.2 TDS (Toss Design System) setup
+### 2.2 TDS (Toss Design System) setup (optional)
 
-Non-game mini-apps **must** use TDS. Install the TDS package:
+TDS is optional. If the developer chooses to use TDS, install the TDS package:
 
 ```bash
 {{package_manager}} add {{tds_package}}
@@ -56,7 +56,6 @@ Non-game mini-apps **must** use TDS. Install the TDS package:
 ### 2.4 Checklist
 
 - [ ] 의존성 설치 완료
-- [ ] TDS 패키지 설치 완료 (`{{tds_package}}`)
 - [ ] 개발 서버 정상 실행 확인
 - [ ] Toss 앱에서 개발 서버 연결 확인
 
@@ -77,14 +76,13 @@ Non-game mini-apps **must** use TDS. Install the TDS package:
 ### 3.3 Core features
 
 - Implement main business logic
-- Apply TDS components for UI
+- Apply TDS components for UI (if using TDS)
 {{platform_note}}
 
 ### 3.4 Checklist
 
 - [ ] 라우팅 설정 완료
 - [ ] 주요 화면 구현 완료
-- [ ] TDS 컴포넌트 적용 완료
 - [ ] 인증 연동 완료 (필요 시)
 - [ ] 결제 연동 완료 (필요 시)
 
@@ -143,7 +141,6 @@ Non-game mini-apps **must** use TDS. Install the TDS package:
 ### 6.1 Checklist
 
 - [ ] 출시 정책 검토 완료 (search_docs로 "출시 정책" 검색)
-- [ ] TDS 가이드라인 준수 확인 (비게임 필수)
 - [ ] 앱 리뷰 제출 준비 완료
 - [ ] 메타데이터 (앱 이름, 설명, 아이콘) 준비 완료
 
