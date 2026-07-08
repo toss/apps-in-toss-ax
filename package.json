@@ -1,6 +1,6 @@
 {
   "name": "@apps-in-toss/ax",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "MCP server that provides AppsInToss documentation to AI assistants",
   "type": "module",
   "engines": {
