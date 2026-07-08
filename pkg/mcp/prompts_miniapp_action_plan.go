@@ -15,7 +15,7 @@ var miniappActionPlanCompletions = []Completion{
 	{
 		Ref:    PromptRef("miniapp-action-plan"),
 		Arg:    "platform",
-		Values: []string{"react-native", "web"},
+		Values: []string{"web", "react-native"},
 	},
 	{
 		Ref:    PromptRef("miniapp-action-plan"),
@@ -32,7 +32,7 @@ var miniappActionPlan = &mcp.Prompt{
 		{
 			Name:        "platform",
 			Title:       "Platform",
-			Description: "Development platform: react-native or web",
+			Description: "Development platform: web (recommended default) or react-native",
 			Required:    true,
 		},
 		{
@@ -74,20 +74,20 @@ func buildPlatformVars(platform, packageManager string) map[string]string {
 	}
 
 	switch platform {
-	case "web":
+	case "react-native":
+		vars["{{framework_package}}"] = "@apps-in-toss/framework"
+		vars["{{tds_package}}"] = "@toss/tds-react-native"
+		vars["{{routing_detail}}"] = "- Set up screens using React Navigation or framework routing"
+		vars["{{platform_note}}"] = "- Use React Native components where the project requires them"
+		vars["{{testing_checklist}}"] = "- [ ] iOS / Android 기기에서 네이티브 동작 확인"
+		vars["{{tds_tool_guide}}"] = "- `search_tds_rn_docs`: TDS React Native 컴포넌트 문서 검색\n- `get_tds_rn_doc`: TDS React Native 문서 상세 내용 조회"
+	default: // web (recommended default)
 		vars["{{framework_package}}"] = "@apps-in-toss/web-framework"
 		vars["{{tds_package}}"] = "@toss/tds-mobile"
 		vars["{{routing_detail}}"] = "- Set up pages using file-based routing or manual route configuration"
 		vars["{{platform_note}}"] = "- Ensure WebView compatibility with Toss in-app browser"
 		vars["{{testing_checklist}}"] = "- [ ] 다양한 브라우저 환경에서 WebView 호환성 확인"
 		vars["{{tds_tool_guide}}"] = "- `search_tds_web_docs`: TDS Web 컴포넌트 문서 검색\n- `get_tds_web_doc`: TDS Web 문서 상세 내용 조회"
-	default: // react-native
-		vars["{{framework_package}}"] = "@apps-in-toss/framework"
-		vars["{{tds_package}}"] = "@toss/tds-react-native"
-		vars["{{routing_detail}}"] = "- Set up screens using React Navigation or framework routing"
-		vars["{{platform_note}}"] = "- Use React Native components for near-native performance"
-		vars["{{testing_checklist}}"] = "- [ ] iOS / Android 기기에서 네이티브 동작 확인"
-		vars["{{tds_tool_guide}}"] = "- `search_tds_rn_docs`: TDS React Native 컴포넌트 문서 검색\n- `get_tds_rn_doc`: TDS React Native 문서 상세 내용 조회"
 	}
 
 	return vars
