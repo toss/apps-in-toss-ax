@@ -1,24 +1,51 @@
 {
   "name": "@apps-in-toss/ax",
-  "version": "1.0.0",
-  "description": "AppsInToss CLI",
+  "version": "0.7.0",
+  "description": "MCP server that provides AppsInToss documentation to AI assistants",
+  "type": "module",
   "engines": {
+    "node": ">=22.9.0",
     "npm": ">=8"
   },
-  "repository": "toss/apps-in-toss-cli",
+  "repository": "toss/apps-in-toss-ax",
+  "homepage": "https://github.com/toss/apps-in-toss-ax#readme",
+  "bugs": "https://github.com/toss/apps-in-toss-ax/issues",
   "scripts": {
+    "prepack": "node -e \"require('fs').rmSync('bin', { recursive: true, force: true })\"",
     "postinstall": "node scripts/postinstall.js"
   },
   "dependencies": {
     "bin-links": "^6.0.0",
     "https-proxy-agent": "^7.0.2",
     "node-fetch": "^3.3.2",
-    "tar": "7.5.2"
+    "tar": "7.5.16"
   },
   "bin": {
     "ax": "bin/ax"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "files": [
+    "scripts/postinstall.js"
+  ],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "keywords": [
+    "apps-in-toss",
+    "toss",
+    "mcp",
+    "mcp-server",
+    "mini-app",
+    "cli"
+  ],
+  "author": "Viva Republica, Inc.",
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  }
 }
