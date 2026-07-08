@@ -16,9 +16,11 @@ import (
 )
 
 const (
-	name    = "ax"
-	title   = "ax"
-	version = "0.1.0"
+	name  = "ax"
+	title = "ax"
+
+	// Fallback when the caller doesn't wire in the CLI version via WithVersion.
+	defaultVersion = "0.0.0-dev"
 )
 
 type lazySearcher struct {
@@ -61,6 +63,7 @@ type Protocol struct {
 	tdsWeb      *lazySearcher
 	analytics   *instrumentation.Analytics
 	sessionID   string
+	version     string
 }
 
 type Option func(*Protocol)
@@ -77,6 +80,12 @@ func WithAnalytics(analytics *instrumentation.Analytics) Option {
 	}
 }
 
+func WithVersion(version string) Option {
+	return func(s *Protocol) {
+		s.version = version
+	}
+}
+
 func New(options ...Option) *Protocol {
 	p := &Protocol{
 		Transport:   &mcp.StdioTransport{},
@@ -86,6 +95,7 @@ func New(options ...Option) *Protocol {
 		tdsRn:       newLazySearcher(search.NewTDSSearcher),
 		tdsWeb:      newLazySearcher(search.NewTDSMobileSearcher),
 		sessionID:   newTelemetrySessionID(),
+		version:     defaultVersion,
 	}
 
 	for _, o := range options {
@@ -96,7 +106,7 @@ func New(options ...Option) *Protocol {
 		&mcp.Implementation{
 			Name:    name,
 			Title:   title,
-			Version: version,
+			Version: p.version,
 		},
 		&mcp.ServerOptions{
 			Instructions:      instructions(),

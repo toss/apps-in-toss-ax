@@ -23,7 +23,10 @@ func startMcpServer(cmd *cobra.Command, _ []string, instrumentation features.Ins
 	if usageStatsDisabled(cmd) {
 		analytics = nil
 	}
-	p := mcp.New(mcp.WithAnalytics(analytics))
+	p := mcp.New(
+		mcp.WithAnalytics(analytics),
+		mcp.WithVersion(GetVersion().Version),
+	)
 
 	return p.Server.Run(cmd.Context(), p.Transport)
 }

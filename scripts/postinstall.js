@@ -36,20 +36,24 @@ const readPackageJson = async () => {
   return JSON.parse(contents);
 };
 
+// Release artifacts are named after the binary (GoReleaser project name),
+// not the scoped npm package name.
+const getBinaryName = (packageJson) => Object.keys(packageJson.bin)[0];
+
 // Build the download url from package.json
 const getDownloadUrl = (packageJson) => {
-  const pkgName = packageJson.name;
+  const binName = getBinaryName(packageJson);
   const version = packageJson.version;
   const repo = packageJson.repository;
-  const url = `https://github.com/${repo}/releases/download/v${version}/${pkgName}_${platform}_${arch}.tar.gz`;
+  const url = `https://github.com/${repo}/releases/download/v${version}/${binName}_${platform}_${arch}.tar.gz`;
   return url;
 };
 
 const fetchAndParseCheckSumFile = async (packageJson, agent) => {
   const version = packageJson.version;
-  const pkgName = packageJson.name;
+  const binName = getBinaryName(packageJson);
   const repo = packageJson.repository;
-  const checksumFileUrl = `https://github.com/${repo}/releases/download/v${version}/${pkgName}_${version}_checksums.txt`;
+  const checksumFileUrl = `https://github.com/${repo}/releases/download/v${version}/${binName}_${version}_checksums.txt`;
 
   // Fetch the checksum file
   console.info("Downloading", checksumFileUrl);
@@ -74,9 +78,6 @@ const fetchAndParseCheckSumFile = async (packageJson, agent) => {
   }
 };
 
-const errGlobal = `Installing AppsInToss CLI as a global module is not supported.
-Please use one of the supported package managers: https://github.com/toss/apps-in-toss-ax#install-the-cli
-`;
 const errChecksum = "Checksum mismatch. Downloaded data might be corrupted.";
 const errUnsupported = `Installation is not supported for ${process.platform} ${process.arch}`;
 
@@ -88,25 +89,20 @@ const errUnsupported = `Installation is not supported for ${process.platform} ${
  *  See: https://docs.npmjs.com/files/package.json#bin
  */
 async function main() {
-  const yarnGlobal = JSON.parse(
-    process.env.npm_config_argv || "{}"
-  ).original?.includes("global");
-  if (process.env.npm_config_global || yarnGlobal) {
-    throw errGlobal;
-  }
   if (!arch || !platform) {
     throw errUnsupported;
   }
 
   // Read from package.json and prepare for the installation.
   const pkg = await readPackageJson();
+  const binCmd = getBinaryName(pkg);
   if (platform === "windows") {
     // Update bin path in package.json
-    pkg.bin[pkg.name] += ".exe";
+    pkg.bin[binCmd] += ".exe";
   }
 
   // Prepare the installation path by creating the directory if it doesn't exist.
-  const binPath = pkg.bin[pkg.name];
+  const binPath = pkg.bin[binCmd];
   const binDir = path.dirname(binPath);
   await fs.promises.mkdir(binDir, { recursive: true });
 
@@ -128,8 +124,11 @@ async function main() {
   const url = getDownloadUrl(pkg);
   console.info("Downloading", url);
   const resp = await fetch(url, { agent });
+  if (!resp.ok) {
+    throw `Failed to download ${url}: ${resp.status} ${resp.statusText}`;
+  }
   const hash = createHash("sha256");
-  const pkgNameWithPlatform = `${pkg.name}_${platform}_${arch}.tar.gz`;
+  const pkgNameWithPlatform = `${binCmd}_${platform}_${arch}.tar.gz`;
 
   // Then, decompress the binary -- we will first Un-GZip, then we will untar.
   const ungz = zlib.createGunzip();
@@ -168,10 +167,16 @@ async function main() {
     untar.on("end", () => resolve());
   });
 
-  // Link the binaries in postinstall to support yarn
+  // npm links bins before postinstall runs and silently skips the
+  // then-missing binary, so re-link here. global/top make the link land in
+  // the global bin dir on `npm install -g`.
+  const isGlobalInstall = process.env.npm_config_global === "true";
   await binLinks({
     path: path.resolve("."),
-    pkg: { ...pkg, bin: { [pkg.name]: binPath } },
+    pkg: { ...pkg, bin: { [binCmd]: binPath } },
+    global: isGlobalInstall,
+    top: isGlobalInstall,
+    force: true,
   });
 
   console.info("Installed AppsInToss CLI successfully");
