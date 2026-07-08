@@ -1,19 +1,47 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g., 1.0.0)'
-        required: true
-        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  check-version:
+    name: Check version change
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.version.outputs.should_release }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Resolve release version
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: node scripts/validate-release-version.js
+
   goreleaser:
     name: GoReleaser
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -31,8 +59,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}" || true
-          git push origin "v${{ inputs.version }}" || true
+          git tag -a "v${{ needs.check-version.outputs.version }}" -m "Release v${{ needs.check-version.outputs.version }}"
+          git push origin "v${{ needs.check-version.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -43,17 +71,19 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: v${{ inputs.version }}
+          GORELEASER_CURRENT_TAG: v${{ needs.check-version.outputs.version }}
           AMPLITUDE_API_KEY: ${{ secrets.AMPLITUDE_API_KEY }}
 
-      - run: gh release edit v${{ inputs.version }} --draft=false
+      - run: gh release edit v${{ needs.check-version.outputs.version }} --draft=false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-brew-scoop:
     name: Publish Brew and Scoop
     needs:
+      - check-version
       - goreleaser
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -74,6 +104,37 @@ jobs:
             homebrew-tap
             scoop-bucket
 
-      - run: go run tools/publish/main.go "${{ inputs.version }}"
+      - run: go run tools/publish/main.go "${{ needs.check-version.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  publish-npm:
+    name: Publish npm
+    needs:
+      - check-version
+      - goreleaser
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Skip if version already published
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if npm view "@apps-in-toss/ax@${VERSION}" version 2>/dev/null; then
+            echo "::error::@apps-in-toss/ax@${VERSION} is already published to npm"
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
